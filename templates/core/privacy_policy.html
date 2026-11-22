@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Privacy Policy — Neighborly{% endblock %}
+{% block content %}
+<div class="page-header"><div class="container"><h1>Privacy Policy</h1><p>Last updated: October 2024</p></div></div>
+<div class="container py-5"><div class="row justify-content-center"><div class="col-lg-8">
+<div class="alert alert-warning mb-4" role="note">
+  <strong>Note:</strong> This is a template privacy policy for a student demonstration project. It is not a legally reviewed document and should not be used for a real commercial application without review by a qualified legal professional.
+</div>
+<div style="line-height:1.9;color:var(--color-text);">
+<h2 style="font-size:1.15rem;font-weight:700;margin:2rem 0 0.75rem;">1. Information We Collect</h2>
+<p>When you register on Neighborly, we collect: your name, email address, username, city, area, and optionally a phone number and profile photo. If you are a provider, we also collect your skills and service descriptions. Service requests include location information, work descriptions, and dates.</p>
+
+<h2 style="font-size:1.15rem;font-weight:700;margin:2rem 0 0.75rem;">2. How We Use Your Information</h2>
+<p>We use your information to: allow you to create and manage your account, connect customers with providers, display your profile and services to other users, and enable the service request and review workflow. We do not sell your data to third parties.</p>
+
+<h2 style="font-size:1.15rem;font-weight:700;margin:2rem 0 0.75rem;">3. Information Visibility</h2>
+<p>Provider profiles (name, city, area, bio, skills) are publicly visible. Customer names appear in reviews but email addresses, phone numbers, and exact home addresses are never publicly displayed. Service request location details are only shared with the relevant provider.</p>
+
+<h2 style="font-size:1.15rem;font-weight:700;margin:2rem 0 0.75rem;">4. Data Storage</h2>
+<p>All data is stored in a local SQLite database for development purposes. Uploaded images are stored in the media directory on the server. Passwords are hashed using Django's default hashing mechanism and are never stored in plain text.</p>
+
+<h2 style="font-size:1.15rem;font-weight:700;margin:2rem 0 0.75rem;">5. Cookies and Sessions</h2>
+<p>Neighborly uses Django session cookies to keep you logged in. No tracking or advertising cookies are used.</p>
+
+<h2 style="font-size:1.15rem;font-weight:700;margin:2rem 0 0.75rem;">6. Contact</h2>
+<p>For questions about this privacy policy or your data, please use the <a href="{% url 'core:contact' %}">contact form</a>.</p>
+</div>
+</div></div></div>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block title %}Provider Requests — Neighborly{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <h1>Customer Requests</h1>
+    <p>Review and manage all incoming service requests.</p>
+  </div>
+</div>
+<div class="container py-5">
+  <!-- Status filter tabs -->
+  <div class="d-flex gap-2 flex-wrap mb-4">
+    <a href="{% url 'services:provider_requests' %}" class="btn {% if not status_filter %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">All ({{ all_requests.count }})</a>
+    {% for val, label in status_choices %}
+    <a href="?status={{ val }}" class="btn {% if status_filter == val %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">{{ label }}</a>
+    {% endfor %}
+  </div>
+
+  {% if all_requests %}
+  <div class="d-flex flex-column gap-3">
+    {% for req in all_requests %}
+    <div class="request-card">
+      <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+        <div>
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge {{ req.get_status_badge_class }}">{{ req.get_status_display }}</span>
+            <span style="font-size:0.78rem;color:var(--color-text-light);">#{{ req.pk }} · {{ req.created_at|date:"d M Y" }}</span>
+          </div>
+          <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.2rem;">
+            <a href="{% url 'bookings:request_detail' req.pk %}" class="text-decoration-none" style="color:var(--color-text);">
+              {{ req.service.title }}
+            </a>
+          </h3>
+          <div style="font-size:0.85rem;color:var(--color-text-muted);margin-bottom:0.5rem;">
+            Customer: <strong>{{ req.customer.profile.get_display_name }}</strong>
+            · Requested for: {{ req.requested_date|date:"d M Y" }}
+            {% if req.requested_time %} at {{ req.requested_time }}{% endif %}
+          </div>
+          {% if req.work_description %}
+          <p style="font-size:0.87rem;color:var(--color-text-muted);margin-bottom:0.5rem;">{{ req.work_description|truncatechars:150 }}</p>
+          {% endif %}
+          {% if req.service_location %}
+          <div style="font-size:0.82rem;color:var(--color-text-light);">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            {{ req.service_location }}
+          </div>
+          {% endif %}
+        </div>
+        <div class="d-flex flex-column gap-2 align-items-end">
+          {% if req.status == 'pending' %}
+          <form method="POST" action="{% url 'services:update_request_status' req.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'services:provider_requests' %}">
+            <input type="text" name="provider_response" class="form-control form-control-sm mb-2"
+                   placeholder="Optional response to customer">
+            <div class="d-flex gap-2">
+              <button type="submit" name="status" value="accepted" class="btn btn-primary btn-sm">Accept</button>
+              <button type="submit" name="status" value="rejected" class="btn btn-danger btn-sm"
+                      onclick="return confirm('Reject this request?')">Reject</button>
+            </div>
+          </form>
+          {% elif req.status == 'accepted' %}
+          <form method="POST" action="{% url 'services:update_request_status' req.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'services:provider_requests' %}">
+            <input type="text" name="provider_response" class="form-control form-control-sm mb-2"
+                   placeholder="Optional response to customer">
+            <button type="submit" name="status" value="inprogress" class="btn btn-primary btn-sm">Mark In Progress</button>
+          </form>
+          {% elif req.status == 'inprogress' %}
+          <form method="POST" action="{% url 'services:update_request_status' req.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'services:provider_requests' %}">
+            <input type="text" name="provider_response" class="form-control form-control-sm mb-2"
+                   placeholder="Optional response to customer">
+            <button type="submit" name="status" value="completed" class="btn btn-primary btn-sm"
+                    onclick="return confirm('Mark this request as completed?')">Mark Completed</button>
+          </form>
+          {% endif %}
+
+          {% if req.notes %}
+          <details style="font-size:0.82rem;color:var(--color-text-muted);">
+            <summary style="cursor:pointer;">Customer notes</summary>
+            <div style="margin-top:0.4rem;padding:0.5rem;background:var(--color-surface);border-radius:var(--radius-sm);">{{ req.notes }}</div>
+          </details>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+    </div>
+    <h4>No requests{% if status_filter %} with status "{{ status_filter }}"{% endif %}</h4>
+    <p>{% if status_filter %}Try a different filter.{% else %}Customer requests will appear here once customers discover your services.{% endif %}</p>
+    {% if not status_filter %}
+    <a href="{% url 'services:service_create' %}" class="btn btn-primary">Add a Service</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

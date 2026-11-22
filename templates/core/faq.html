@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}FAQ — Neighborly{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <h1>Frequently Asked Questions</h1>
+    <p>Answers to common questions about Neighborly.</p>
+  </div>
+</div>
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+
+      <h2 style="font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-light);margin-bottom:1rem;">General</h2>
+
+      {% for q, a in faqs %}
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">{{ q }}<svg class="faq-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="transition:transform 0.25s"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <div class="faq-answer" style="display:none;">{{ a }}</div>
+      </div>
+      {% empty %}
+
+      <div class="faq-item"><button class="faq-question" aria-expanded="false">Do I need an account to browse services?<svg class="faq-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="transition:transform 0.25s"><polyline points="6 9 12 15 18 9"/></svg></button><div class="faq-answer" style="display:none;">No — you can browse all service listings without creating an account. You only need to register to submit a service request, save services, or write a review.</div></div>
+
+      <div class="faq-item"><button class="faq-question" aria-expanded="false">Is registration free?<svg class="faq-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="transition:transform 0.25s"><polyline points="6 9 12 15 18 9"/></svg></button><div class="faq-answer" style="display:none;">Yes, completely free for both customers and providers. Neighborly does not charge listing fees or commissions.</div></div>
+
+      <div class="faq-item"><button class="faq-question" aria-expanded="false">Can I be both a customer and a provider?<svg class="faq-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="transition:transform 0.25s"><polyline points="6 9 12 15 18 9"/></svg></button><div class="faq-answer" style="display:none;">Currently, each account has a single role — either customer or provider. You can create two separate accounts if you need both capabilities.</div></div>
+
+      <h2 style="font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-light);margin:2rem 0 1rem;">Requests & Bookings</h2>
+
+      <div class="faq-item"><button class="faq-question" aria-expanded="false">How do I request a service?<svg class="faq-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="transition:transform 0.25s"><polyline points="6 9 12 15 18 9"/></svg></button><div class="faq-answer" style="display:none;">Find a service you need, click "View Details," then click "Request This Service." Fill in your preferred date, time, location, and describe the work needed. The provider will be able to accept or reject your request from their dashboard.</div></div>
+
+      <div class="faq-item"><button class="faq-question" aria-expanded="false">Can I cancel a request?<svg class="faq-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="transition:transform 0.25s"><polyline points="6 9 12 15 18 9"/></svg></button><div class="faq-answer" style="display:none;">Yes. Customers can cancel requests that are still in Pending or Accepted status. Once a request moves to In Progress or Completed, it cannot be cancelled through the platform.</div></div>
+
+      <div class="faq-item"><button class="faq-question" aria-expanded="false">Does Neighborly guarantee that a provider will accept my request?<svg class="faq-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="transition:transform 0.25s"><polyline points="6 9 12 15 18 9"/></svg></button><div class="faq-answer" style="display:none;">No. Providers review each request independently and may accept or reject it based on their availability and the nature of the work. Neighborly does not intervene in individual booking decisions.</div></div>
+
+      <h2 style="font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-light);margin:2rem 0 1rem;">Pricing & Payments</h2>
+
+      <div class="faq-item"><button class="faq-question" aria-expanded="false">Does Neighborly handle payments?<svg class="faq-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="transition:transform 0.25s"><polyline points="6 9 12 15 18 9"/></svg></button><div class="faq-answer" style="display:none;">No. Neighborly does not process payments. The pricing listed is a starting figure provided by the provider. Payment arrangements are made directly between the customer and provider outside the platform.</div></div>
+
+      <div class="faq-item"><button class="faq-question" aria-expanded="false">Is the listed price final?<svg class="faq-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="transition:transform 0.25s"><polyline points="6 9 12 15 18 9"/></svg></button><div class="faq-answer" style="display:none;">The price shown is the provider's listed rate as a starting point — per hour, per visit, or per project. The actual cost for your specific work may vary depending on the complexity and time required. We encourage discussing details with the provider before committing.</div></div>
+
+      <h2 style="font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-light);margin:2rem 0 1rem;">Reviews</h2>
+
+      <div class="faq-item"><button class="faq-question" aria-expanded="false">How do reviews work?<svg class="faq-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="transition:transform 0.25s"><polyline points="6 9 12 15 18 9"/></svg></button><div class="faq-answer" style="display:none;">Only customers whose service request has been marked as Completed can leave a review. Each completed request allows one review. Ratings are calculated from real reviews — no artificial or default ratings are added.</div></div>
+
+      <div class="faq-item"><button class="faq-question" aria-expanded="false">Can providers respond to reviews?<svg class="faq-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="transition:transform 0.25s"><polyline points="6 9 12 15 18 9"/></svg></button><div class="faq-answer" style="display:none;">In this version, providers cannot formally respond to reviews. Administrators can moderate inappropriate content through the admin panel.</div></div>
+
+      {% endfor %}
+
+      <div class="text-center mt-5">
+        <p class="text-muted" style="font-size:0.9rem;">Still have a question?</p>
+        <a href="{% url 'core:contact' %}" class="btn btn-outline-primary">Contact Us</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

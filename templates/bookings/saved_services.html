@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}Saved Services — Neighborly{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <h1>Saved Services</h1>
+    <p>Services you've bookmarked for later.</p>
+  </div>
+</div>
+<div class="container py-5">
+  {% if saved_services %}
+  <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
+    {% for saved in saved_services %}
+    <div class="col">
+      <div class="card service-card h-100">
+        {% include 'includes/service_card.html' with service=saved.service %}
+        <div class="card-footer d-flex align-items-center justify-content-between">
+          <span style="font-size:0.78rem;color:var(--color-text-light);">Saved {{ saved.created_at|date:"d M Y" }}</span>
+          <form method="POST" action="{% url 'bookings:remove_saved' saved.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Remove from saved?')">Remove</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+    </div>
+    <h4>No saved services yet</h4>
+    <p>Browse services and click the heart icon to save them here for easy access later.</p>
+    <a href="{% url 'services:service_list' %}" class="btn btn-primary">Explore Services</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

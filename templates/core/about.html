@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}About Neighborly{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <h1>About Neighborly</h1>
+    <p>Local Services, Stronger Communities</p>
+  </div>
+</div>
+<section class="py-5" style="background:var(--color-bg);">
+  <div class="container">
+    <div class="row g-5 align-items-center">
+      <div class="col-lg-6">
+        <h2 class="section-title">What Is Neighborly?</h2>
+        <p class="text-muted mt-2" style="font-size:0.97rem;line-height:1.75;">
+          Neighborly is a community-focused platform that connects people who need everyday home and local services with skilled individuals who live in the same city or neighbourhood.
+        </p>
+        <p class="text-muted" style="font-size:0.97rem;line-height:1.75;">
+          Finding a reliable local plumber, cleaner, or tutor is harder than it should be. People often rely on word-of-mouth referrals — information that isn't always accessible or organised. Neighborly brings that trust and local knowledge into a structured, searchable platform that anyone can use.
+        </p>
+        <p class="text-muted" style="font-size:0.97rem;line-height:1.75;">
+          This project was designed and built as a BTech Computer Science final-year application, with the aim of creating a genuinely functional, well-designed service marketplace using Django. Every feature on this platform — from search and filtering to service requests and review workflows — is implemented with a real database and server-side logic.
+        </p>
+      </div>
+      <div class="col-lg-6">
+        <div class="rounded-3 overflow-hidden" style="box-shadow:var(--shadow-lg);aspect-ratio:4/3;">
+          <img src="{% static 'images/community-team.jpg' %}"
+               alt="A community of people working together in a neighbourhood"
+               style="width:100%;height:100%;object-fit:cover;"
+               onerror="this.parentElement.style.background='var(--color-secondary-light)'">
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="py-5" style="background:var(--color-surface);">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="section-title">What Neighborly Offers</h2>
+    </div>
+    <div class="row g-4">
+      {% for feature in features %}
+      <div class="col-md-4">...</div>
+      {% empty %}
+      <div class="col-md-4">
+        <div class="p-4 rounded-3" style="background:var(--color-card);border:1px solid var(--color-border);height:100%;">
+          <div class="feature-icon mb-3" style="background:rgba(35,76,58,0.08);color:var(--color-primary);width:52px;height:52px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.5rem;">Discover Local Services</h3>
+          <p style="font-size:0.87rem;color:var(--color-text-muted);margin:0;">Search by keyword, category, city, or area to find exactly the service type and provider you're looking for.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="p-4 rounded-3" style="background:var(--color-card);border:1px solid var(--color-border);height:100%;">
+          <div class="feature-icon mb-3" style="background:rgba(35,76,58,0.08);color:var(--color-primary);width:52px;height:52px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+          </div>
+          <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.5rem;">Transparent Requests</h3>
+          <p style="font-size:0.87rem;color:var(--color-text-muted);margin:0;">Submit service requests with your requirements, track every status change, and communicate through the platform.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="p-4 rounded-3" style="background:var(--color-card);border:1px solid var(--color-border);height:100%;">
+          <div class="feature-icon mb-3" style="background:rgba(35,76,58,0.08);color:var(--color-primary);width:52px;height:52px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.5rem;">Genuine Reviews</h3>
+          <p style="font-size:0.87rem;color:var(--color-text-muted);margin:0;">Reviews can only be submitted by customers whose request has been marked Completed — no fake ratings.</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="py-5" style="background:var(--color-bg);">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-8 text-center">
+        <h2 class="section-title">A Student Project, Built With Care</h2>
+        <p class="text-muted mt-3" style="font-size:0.95rem;line-height:1.8;max-width:600px;margin:1rem auto;">
+          Neighborly was built as a final-year BTech CS project to demonstrate a complete, real-world web application using Django. It follows Django best practices, uses a proper relational database, implements role-based access control, and provides a thoughtfully designed user interface — without the need for a team or extensive resources.
+        </p>
+        <div class="d-flex gap-3 justify-content-center mt-4 flex-wrap">
+          <a href="{% url 'services:service_list' %}" class="btn btn-primary">Browse Services</a>
+          <a href="{% url 'core:contact' %}" class="btn btn-secondary">Get in Touch</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

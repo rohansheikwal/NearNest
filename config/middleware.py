@@ -1,0 +1,162 @@
+import time
+from urllib.parse import parse_qs, urlsplit
+
+from django.conf import settings
+from django.contrib.sessions.middleware import SessionMiddleware
+from django.contrib.sessions.backends.base import UpdateError
+from django.contrib.sessions.exceptions import SessionInterrupted
+from django.utils.cache import patch_vary_headers
+from django.utils.http import http_date
+
+
+class PortalSessionMiddleware(SessionMiddleware):
+    """Keep customer and provider/admin authentication in separate sessions."""
+
+    def _portal_for_request(self, request):
+        # 1. Host / Subdomain check (e.g. provider.localhost, customer.localhost)
+        host = request.get_host().split(':')[0].lower()
+        if host.startswith('provider.'):
+            return 'provider'
+        if host.startswith('customer.'):
+            return 'customer'
+
+        # 2. Custom header from frontend (per-tab sessionStorage or AJAX)
+        header_portal = request.headers.get('X-NearNest-Portal') or request.META.get('HTTP_X_NEARNST_PORTAL')
+        if header_portal in settings.PORTAL_SESSION_COOKIE_NAMES:
+            return header_portal
+
+        # 3. Explicit query parameter or POST parameter
+        portal = request.GET.get('portal') or request.POST.get('portal')
+        if portal in settings.PORTAL_SESSION_COOKIE_NAMES:
+            return portal
+
+        # 4. Check 'next' parameter if present
+        next_url = request.GET.get('next') or request.POST.get('next')
+        if next_url:
+            portal = parse_qs(urlsplit(next_url).query).get('portal', [None])[0]
+            if portal in settings.PORTAL_SESSION_COOKIE_NAMES:
+                return portal
+            if urlsplit(next_url).path.startswith(('/services/provider/', '/admin/', '/accounts/register/provider/')):
+                return 'provider'
+            if urlsplit(next_url).path.startswith(('/accounts/register/customer/', '/accounts/dashboard/', '/bookings/')):
+                return 'customer'
+
+        # 5. Path prefixes for role-specific routes
+        if request.path.startswith(('/services/provider/', '/admin/', '/accounts/register/provider/')):
+            return 'provider'
+        if request.path.startswith(('/accounts/register/customer/', '/accounts/dashboard/', '/bookings/')):
+            return 'customer'
+
+        # 6. Referer check (for internal link clicks from within a portal)
+        referer = request.META.get('HTTP_REFERER')
+        if referer:
+            ref_parsed = urlsplit(referer)
+            ref_host = ref_parsed.netloc.split(':')[0].lower()
+            if ref_host.startswith('provider.'):
+                return 'provider'
+            if ref_host.startswith('customer.'):
+                return 'customer'
+            ref_portal = parse_qs(ref_parsed.query).get('portal', [None])[0]
+            if ref_portal in settings.PORTAL_SESSION_COOKIE_NAMES:
+                return ref_portal
+            if ref_parsed.path.startswith(('/services/provider/', '/admin/', '/accounts/register/provider/')):
+                return 'provider'
+            if ref_parsed.path.startswith(('/accounts/register/customer/', '/accounts/dashboard/', '/bookings/')):
+                return 'customer'
+
+        return 'customer'
+
+    def switch_portal(self, request, target_portal):
+        """Allow views (e.g. login) to switch the active portal session dynamically."""
+        if target_portal in settings.PORTAL_SESSION_COOKIE_NAMES:
+            request.portal = target_portal
+            request.portal_cookie_name = settings.PORTAL_SESSION_COOKIE_NAMES[target_portal]
+            cookie_name = request.portal_cookie_name
+            session_key = request.COOKIES.get(cookie_name)
+            request.session = self.SessionStore(session_key)
+
+    def process_request(self, request):
+        request.portal = self._portal_for_request(request)
+        request.portal_cookie_name = settings.PORTAL_SESSION_COOKIE_NAMES[request.portal]
+        request.switch_portal = lambda target: self.switch_portal(request, target)
+        cookie_name = request.portal_cookie_name
+        session_key = request.COOKIES.get(cookie_name)
+
+        # Allow existing users to transition from the old shared session cookie.
+        if not session_key and not any(
+            name in request.COOKIES
+            for name in settings.PORTAL_SESSION_COOKIE_NAMES.values()
+        ):
+            session_key = request.COOKIES.get(settings.SESSION_COOKIE_NAME)
+            request.using_legacy_session_cookie = bool(session_key)
+        else:
+            request.using_legacy_session_cookie = False
+        request.session = self.SessionStore(session_key)
+
+    def process_response(self, request, response):
+        try:
+            accessed = request.session.accessed
+            modified = request.session.modified
+            empty = request.session.is_empty()
+        except AttributeError:
+            return response
+
+        cookie_name = getattr(
+            request,
+            'portal_cookie_name',
+            settings.PORTAL_SESSION_COOKIE_NAMES['customer'],
+        )
+        if cookie_name in request.COOKIES and empty:
+            response.delete_cookie(
+                cookie_name,
+                path=settings.SESSION_COOKIE_PATH,
+                domain=settings.SESSION_COOKIE_DOMAIN,
+                samesite=settings.SESSION_COOKIE_SAMESITE,
+            )
+            need_vary_cookie = True
+        else:
+            need_vary_cookie = accessed
+            if (modified or settings.SESSION_SAVE_EVERY_REQUEST) and not empty:
+                if request.session.get_expire_at_browser_close():
+                    max_age = None
+                    expires = None
+                else:
+                    max_age = request.session.get_expiry_age()
+                    expires = http_date(time.time() + max_age)
+                if response.status_code < 500:
+                    try:
+                        request.session.save()
+                    except UpdateError:
+                        raise SessionInterrupted(
+                            'The request session was deleted before it completed.'
+                        )
+                    response.set_cookie(
+                        cookie_name,
+                        request.session.session_key,
+                        max_age=max_age,
+                        expires=expires,
+                        domain=settings.SESSION_COOKIE_DOMAIN,
+                        path=settings.SESSION_COOKIE_PATH,
+                        secure=settings.SESSION_COOKIE_SECURE or None,
+                        httponly=settings.SESSION_COOKIE_HTTPONLY or None,
+                        samesite=settings.SESSION_COOKIE_SAMESITE,
+                    )
+                    # Keep Django's conventional cookie synchronized for
+                    # clients/tests that inspect it directly. It is ignored
+                    # once either portal cookie exists.
+                    response.set_cookie(
+                        settings.SESSION_COOKIE_NAME,
+                        request.session.session_key,
+                        max_age=max_age,
+                        expires=expires,
+                        domain=settings.SESSION_COOKIE_DOMAIN,
+                        path=settings.SESSION_COOKIE_PATH,
+                        secure=settings.SESSION_COOKIE_SECURE or None,
+                        httponly=settings.SESSION_COOKIE_HTTPONLY or None,
+                        samesite=settings.SESSION_COOKIE_SAMESITE,
+                    )
+                    need_vary_cookie = True
+        if need_vary_cookie:
+            patch_vary_headers(response, ('Cookie',))
+        response['X-NearNest-Portal'] = getattr(request, 'portal', 'customer')
+        return response

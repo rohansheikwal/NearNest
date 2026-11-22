@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}How It Works — Neighborly{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <h1>How Neighborly Works</h1>
+    <p>Simple steps for customers and providers.</p>
+  </div>
+</div>
+
+<section class="py-5" style="background:var(--color-bg);">
+  <div class="container">
+    <div class="row g-5">
+      <div class="col-lg-6">
+        <h2 class="section-title">For Customers</h2>
+        <p class="text-muted mb-4">Finding reliable local services in five easy steps.</p>
+        <div class="steps-wrap">
+          <div class="step-item"><div class="step-num">1</div><div class="step-content"><h5>Create a Free Account</h5><p>Register as a customer with your name, city, and email. It takes under a minute.</p></div></div>
+          <div class="step-item"><div class="step-num">2</div><div class="step-content"><h5>Find a Service</h5><p>Use the search bar and filters — by keyword, category, city, area, or price — to discover providers near you.</p></div></div>
+          <div class="step-item"><div class="step-num">3</div><div class="step-content"><h5>Review Provider Profiles</h5><p>Read service descriptions, see pricing, check availability, and review ratings from previous customers.</p></div></div>
+          <div class="step-item"><div class="step-num">4</div><div class="step-content"><h5>Submit a Request</h5><p>Click "Request This Service," fill in your preferred date, time, location, and description of the work needed.</p></div></div>
+          <div class="step-item"><div class="step-num">5</div><div class="step-content"><h5>Track & Review</h5><p>Follow your request from Pending to Completed on your dashboard. Leave a genuine review once the service is done.</p></div></div>
+        </div>
+        <div class="mt-4">
+          <a href="{% url 'accounts:register_customer' %}" class="btn btn-primary">Get Started as Customer</a>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <h2 class="section-title">For Providers</h2>
+        <p class="text-muted mb-4">Start reaching local customers with your skills.</p>
+        <div class="steps-wrap">
+          <div class="step-item"><div class="step-num" style="background:var(--color-accent);">1</div><div class="step-content"><h5>Register as a Provider</h5><p>Create a provider account with your skills, city, and a short bio about your experience.</p></div></div>
+          <div class="step-item"><div class="step-num" style="background:var(--color-accent);">2</div><div class="step-content"><h5>List Your Services</h5><p>Create service listings with a clear title, description, your pricing, availability, and a service photo.</p></div></div>
+          <div class="step-item"><div class="step-num" style="background:var(--color-accent);">3</div><div class="step-content"><h5>Receive Requests</h5><p>When a customer sends a request, it appears on your Provider Dashboard with all their details.</p></div></div>
+          <div class="step-item"><div class="step-num" style="background:var(--color-accent);">4</div><div class="step-content"><h5>Manage Your Work</h5><p>Accept or reject requests. Mark accepted requests as In Progress, then Completed when the job is done.</p></div></div>
+          <div class="step-item"><div class="step-num" style="background:var(--color-accent);">5</div><div class="step-content"><h5>Build Your Reputation</h5><p>Satisfied customers leave genuine reviews. Your ratings appear on your profile and services to attract more work.</p></div></div>
+        </div>
+        <div class="mt-4">
+          <a href="{% url 'accounts:register_provider' %}" class="btn btn-accent">Become a Provider</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="py-5" style="background:var(--color-primary);color:#fff;">
+  <div class="container text-center">
+    <h2 style="color:#fff;font-size:1.7rem;font-weight:800;margin-bottom:0.75rem;">Ready to get started?</h2>
+    <p style="color:rgba(255,255,255,0.75);margin-bottom:2rem;">Join Neighborly today — as a customer, a provider, or both.</p>
+    <div class="d-flex gap-3 justify-content-center flex-wrap">
+      <a href="{% url 'accounts:register_customer' %}" class="btn btn-accent">Find a Service</a>
+      <a href="{% url 'accounts:register_provider' %}" class="btn btn-secondary">Offer a Service</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

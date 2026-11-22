@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Explore Services — Neighborly{% endblock %}
+{% block meta_description %}Browse local services including plumbing, cleaning, electrical, tutoring, and more. Filter by category, city, and price.{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-2" style="font-size:0.82rem;">
+        <li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+        <li class="breadcrumb-item active">Explore Services</li>
+      </ol>
+    </nav>
+    <h1>Explore Services</h1>
+    <p>Discover trusted local professionals for every home and community need.</p>
+  </div>
+</div>
+
+<div class="container py-5">
+  <div class="row g-4">
+
+    <!-- ========== FILTER SIDEBAR ========== -->
+    <div class="col-lg-3">
+      <div class="filter-sidebar" id="filter-sidebar">
+        <form method="GET" action="" id="filter-form" role="search" aria-label="Service filters">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h2 style="font-size:1rem;font-weight:700;margin:0;">Filters</h2>
+            {% if has_filters %}
+            <a href="{% url 'services:service_list' %}" class="btn btn-secondary btn-sm">Clear All</a>
+            {% endif %}
+          </div>
+
+          <div class="mb-3">
+            <h6>Search</h6>
+            <input type="text" name="q" id="filter-q" class="form-control" placeholder="e.g. plumber..."
+                   value="{{ request.GET.q }}" aria-label="Search services">
+          </div>
+
+          <div class="mb-3">
+            <h6>Category</h6>
+            <select name="category" id="filter-category" class="form-select auto-submit" aria-label="Filter by category">
+              <option value="">All Categories</option>
+              {% for cat in categories %}
+              <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:'i' %}selected{% endif %}>
+                {{ cat.name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <h6>City</h6>
+            <input type="text" name="city" class="form-control" placeholder="e.g. Bangalore"
+                   value="{{ request.GET.city }}" aria-label="Filter by city">
+          </div>
+
+          <div class="mb-3">
+            <h6>Area / Neighbourhood</h6>
+            <input type="text" name="area" class="form-control" placeholder="e.g. Koramangala"
+                   value="{{ request.GET.area }}" aria-label="Filter by area">
+          </div>
+
+          <div class="mb-3">
+            <h6>Price Range (₹)</h6>
+            <div class="d-flex gap-2">
+              <input type="number" name="min_price" class="form-control" placeholder="Min"
+                     value="{{ request.GET.min_price }}" min="0" aria-label="Minimum price">
+              <input type="number" name="max_price" class="form-control" placeholder="Max"
+                     value="{{ request.GET.max_price }}" min="0" aria-label="Maximum price">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <h6>Sort By</h6>
+            <select name="sort" class="form-select auto-submit" aria-label="Sort services">
+              <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>Newest First</option>
+              <option value="price_asc" {% if current_sort == 'price_asc' %}selected{% endif %}>Price: Low to High</option>
+              <option value="price_desc" {% if current_sort == 'price_desc' %}selected{% endif %}>Price: High to Low</option>
+              <option value="rating" {% if current_sort == 'rating' %}selected{% endif %}>Top Rated</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Apply Filters
+          </button>
+        </form>
+      </div>
+
+      <!-- Mobile filter toggle -->
+      <button class="btn btn-outline-primary w-100 d-lg-none mt-2" type="button"
+              data-bs-toggle="collapse" data-bs-target="#filter-sidebar"
+              aria-expanded="false" aria-controls="filter-sidebar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+        Show Filters
+      </button>
+    </div>
+
+    <!-- ========== SERVICE RESULTS ========== -->
+    <div class="col-lg-9">
+      <!-- Results header -->
+      <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+        <div>
+          {% if has_filters %}
+          <h2 style="font-size:1.1rem;font-weight:700;margin:0;">
+            {% if page_obj.paginator.count > 0 %}
+              {{ page_obj.paginator.count }} service{{ page_obj.paginator.count|pluralize }} found
+            {% else %}
+              No services found
+            {% endif %}
+          </h2>
+          {% if current_q %}
+          <p class="text-muted small mb-0">Results for "<strong>{{ current_q }}</strong>"</p>
+          {% endif %}
+          {% else %}
+          <h2 style="font-size:1.1rem;font-weight:700;margin:0;">All Services</h2>
+          {% endif %}
+        </div>
+        <!-- Sort dropdown on mobile -->
+        <div class="d-lg-none">
+          <select class="form-select form-select-sm auto-submit" name="sort" form="filter-form"
+                  style="min-width:160px;" aria-label="Sort services">
+            <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>Newest</option>
+            <option value="price_asc" {% if current_sort == 'price_asc' %}selected{% endif %}>Price ↑</option>
+            <option value="price_desc" {% if current_sort == 'price_desc' %}selected{% endif %}>Price ↓</option>
+            <option value="rating" {% if current_sort == 'rating' %}selected{% endif %}>Top Rated</option>
+          </select>
+        </div>
+      </div>
+
+      {% if page_obj.object_list %}
+      <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-4" id="services-grid">
+        {% for service in page_obj %}
+        <div class="col">
+          {% include 'includes/service_card.html' with service=service saved_ids=saved_ids card_section='explore' card_index=forloop.counter0 %}
+        </div>
+        {% endfor %}
+      </div>
+
+      {% include 'includes/pagination.html' %}
+
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <h4>No services found</h4>
+        <p>
+          {% if has_filters %}
+            Try adjusting your filters — or clear them to see all available services.
+          {% else %}
+            No services are listed yet. Check back soon, or <a href="{% url 'accounts:register_provider' %}">become a provider</a> yourself.
+          {% endif %}
+        </p>
+        {% if has_filters %}
+        <a href="{% url 'services:service_list' %}" class="btn btn-primary">Clear Filters</a>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

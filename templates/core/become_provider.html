@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load neighborly_tags %}
+
+{% block title %}Become a Provider — Neighborly{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <h1>Share Your Skills With Your Community</h1>
+    <p>Create a free provider profile and start receiving service requests from local customers.</p>
+  </div>
+</div>
+
+<section class="py-5" style="background:var(--color-bg);">
+  <div class="container">
+    <div class="row g-5 align-items-center">
+      <div class="col-lg-6">
+        <h2 class="section-title">Who Can Be a Provider?</h2>
+        <p class="text-muted mt-2" style="font-size:0.97rem;line-height:1.75;">
+          Anyone with a practical skill that others in their community might need. You don't need formal certification for every type of work — just the skills, experience, and commitment to do the job well.
+        </p>
+        <ul class="list-unstyled mt-3 mb-4">
+          {% for skill in "Plumbers and pipe fitters,Electricians,Home cleaners,Carpenters and woodworkers,Painters,Gardeners and landscapers,Appliance repair technicians,Computer and laptop repair,Home tutors and coaches,Tailors and seamstresses,Errand runners and delivery helpers,Event assistants and coordinators"|split:"," %}
+          <li class="d-flex align-items-center gap-2 mb-2" style="font-size:0.9rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            {{ skill|trim }}
+          </li>
+          {% endfor %}
+        </ul>
+        <p class="text-muted" style="font-size:0.87rem;">...and many other local and community services.</p>
+      </div>
+      <div class="col-lg-6">
+        <div class="rounded-3 overflow-hidden" style="box-shadow:var(--shadow-lg);aspect-ratio:4/3;">
+          <img src="{% static 'images/provider-tools.jpg' %}"
+               alt="A skilled professional preparing tools for a home service job"
+               style="width:100%;height:100%;object-fit:cover;"
+               onerror="this.parentElement.style.background='var(--color-secondary-light)'">
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="py-5" style="background:var(--color-surface);">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="section-title">How to Get Started</h2>
+    </div>
+    <div class="row g-4 justify-content-center">
+      <div class="col-md-3 col-sm-6 text-center">
+        <div class="step-num mx-auto mb-3" style="width:52px;height:52px;background:var(--color-primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:800;">1</div>
+        <h4 style="font-size:0.95rem;font-weight:700;margin-bottom:0.4rem;">Create Your Account</h4>
+        <p style="font-size:0.85rem;color:var(--color-text-muted);">Register as a provider with your name, city, bio, and skills. Takes under two minutes.</p>
+      </div>
+      <div class="col-md-3 col-sm-6 text-center">
+        <div class="step-num mx-auto mb-3" style="width:52px;height:52px;background:var(--color-primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:800;">2</div>
+        <h4 style="font-size:0.95rem;font-weight:700;margin-bottom:0.4rem;">Create Service Listings</h4>
+        <p style="font-size:0.85rem;color:var(--color-text-muted);">Add your services with clear descriptions, pricing, availability, and an optional photo.</p>
+      </div>
+      <div class="col-md-3 col-sm-6 text-center">
+        <div class="step-num mx-auto mb-3" style="width:52px;height:52px;background:var(--color-primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:800;">3</div>
+        <h4 style="font-size:0.95rem;font-weight:700;margin-bottom:0.4rem;">Receive Requests</h4>
+        <p style="font-size:0.85rem;color:var(--color-text-muted);">Customers find your listing, read your profile, and submit service requests through the platform.</p>
+      </div>
+      <div class="col-md-3 col-sm-6 text-center">
+        <div class="step-num mx-auto mb-3" style="width:52px;height:52px;background:var(--color-primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:800;">4</div>
+        <h4 style="font-size:0.95rem;font-weight:700;margin-bottom:0.4rem;">Build Your Reputation</h4>
+        <p style="font-size:0.85rem;color:var(--color-text-muted);">Complete jobs, collect genuine reviews, and grow your local service reputation over time.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="py-5" style="background:var(--color-bg);">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;">What Neighborly Does</h3>
+        <ul class="list-unstyled">
+          {% for item in "Gives you a professional listing page for your services,Lets customers find and contact you by city and category,Provides a dashboard to manage requests and track work status,Shows your genuine customer reviews and average rating,Makes your profile publicly visible to local customers"|split:"," %}
+          <li class="d-flex align-items-start gap-2 mb-2" style="font-size:0.9rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" style="flex-shrink:0;margin-top:2px" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            {{ item|trim }}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="col-lg-6">
+        <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;">Important Notes</h3>
+        <ul class="list-unstyled">
+          {% for item in "Neighborly does not process payments — pricing discussions happen between you and the customer,Neighborly does not guarantee work volume or income,You are responsible for the quality and completion of your services,This platform is a demonstration project for educational purposes"|split:"," %}
+          <li class="d-flex align-items-start gap-2 mb-2" style="font-size:0.9rem;color:var(--color-text-muted);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:2px" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            {{ item|trim }}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    <div class="text-center mt-5">
+      <a href="{% url 'accounts:register_provider' %}" class="btn btn-primary btn-lg">Create Provider Account — Free</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

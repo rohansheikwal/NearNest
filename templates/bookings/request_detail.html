@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% block title %}Request #{{ service_request.pk }} — Neighborly{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="row g-4 justify-content-center">
+    <div class="col-lg-8">
+      <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb" style="font-size:0.82rem;">
+          <li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+          {% if is_provider_view %}
+          <li class="breadcrumb-item"><a href="{% url 'services:provider_dashboard' %}">Dashboard</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'services:provider_requests' %}">Customer Requests</a></li>
+          {% else %}
+          <li class="breadcrumb-item"><a href="{% url 'accounts:customer_dashboard' %}">Dashboard</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'bookings:my_requests' %}">My Requests</a></li>
+          {% endif %}
+          <li class="breadcrumb-item active">Request #{{ service_request.pk }}</li>
+        </ol>
+      </nav>
+
+      <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+        <h1 style="font-size:1.5rem;">Request #{{ service_request.pk }}</h1>
+        <span class="badge {{ service_request.get_status_badge_class }}" style="font-size:0.85rem;padding:0.5em 1em;">
+          {{ service_request.get_status_display }}
+        </span>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-body p-4">
+          <h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem;">Service Details</h2>
+          <div class="d-flex align-items-start gap-3">
+            {% if service_request.service.image %}
+            <img src="{{ service_request.service.image.url }}" alt="{{ service_request.service.title }}"
+                 style="width:80px;height:80px;border-radius:var(--radius-md);object-fit:cover;flex-shrink:0;">
+            {% endif %}
+            <div>
+              <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.25rem;">{{ service_request.service.title }}</h3>
+              <div style="font-size:0.85rem;color:var(--color-text-muted);">by {{ service_request.service.provider.profile.get_display_name }}</div>
+              <div style="font-size:0.9rem;font-weight:600;color:var(--color-primary);margin-top:0.25rem;">{{ service_request.service.get_price_display }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-body p-4">
+          <h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem;">Request Information</h2>
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <div style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">Requested Date</div>
+              <div>{{ service_request.requested_date|date:"l, d F Y" }}</div>
+            </div>
+            {% if service_request.requested_time %}
+            <div class="col-sm-6">
+              <div style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">Preferred Time</div>
+              <div>{{ service_request.requested_time }}</div>
+            </div>
+            {% endif %}
+            <div class="col-12">
+              <div style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">Service Location</div>
+              <div>{{ service_request.service_location }}</div>
+            </div>
+            <div class="col-12">
+              <div style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">Work Description</div>
+              <div>{{ service_request.work_description }}</div>
+            </div>
+            {% if service_request.notes %}
+            <div class="col-12">
+              <div style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">Additional Notes</div>
+              <div>{{ service_request.notes }}</div>
+            </div>
+            {% endif %}
+            <div class="col-sm-6">
+              <div style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">Submitted On</div>
+              <div>{{ service_request.created_at|date:"d M Y, g:i A" }}</div>
+            </div>
+            {% if is_provider_view %}
+            <div class="col-sm-6">
+              <div style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">Customer</div>
+              <div>{{ service_request.customer.profile.get_display_name }}</div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {% if service_request.provider_response %}
+      <div class="card mb-4" style="border-color:var(--color-secondary) !important;">
+        <div class="card-body p-4">
+          <h2 style="font-size:1rem;font-weight:700;margin-bottom:0.75rem;color:var(--color-primary);">Provider Response</h2>
+          <p style="margin:0;">{{ service_request.provider_response }}</p>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Actions -->
+      <div class="d-flex gap-3 flex-wrap">
+        {% if not is_provider_view and service_request.can_be_cancelled %}
+        <form method="POST" action="{% url 'bookings:cancel_request' service_request.pk %}"
+              onsubmit="return confirm('Are you sure you want to cancel this request?')">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Cancel Request</button>
+        </form>
+        {% endif %}
+
+        {% if not is_provider_view and service_request.status == 'completed' and not has_review %}
+        <a href="{% url 'reviews:submit_review' service_request.pk %}" class="btn btn-primary">
+          Write a Review
+        </a>
+        {% endif %}
+
+        {% if has_review %}
+        <div class="alert alert-success mb-0" style="padding:0.5rem 1rem;font-size:0.88rem;">
+          ✓ You've reviewed this service. Thank you!
+        </div>
+        {% endif %}
+
+        {% if is_provider_view %}
+        <a href="{% url 'services:provider_requests' %}" class="btn btn-secondary">Back to Requests</a>
+        {% else %}
+        <a href="{% url 'bookings:my_requests' %}" class="btn btn-secondary">Back to Requests</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

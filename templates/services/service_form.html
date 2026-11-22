@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if action == 'Edit' %}Edit{% else %}Add New{% endif %} Service — Neighborly{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <h1>{{ action }} Service</h1>
+    <p>{% if action == 'Edit' %}Update your service listing{% else %}Create a new service listing{% endif %}</p>
+  </div>
+</div>
+
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-body p-4">
+          <form method="POST" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger mb-4" role="alert">
+              {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label" for="{{ form.title.id_for_label }}">Service Title *</label>
+                {{ form.title }}
+                {% if form.title.errors %}<div class="invalid-feedback d-block">{{ form.title.errors.0 }}</div>{% endif %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.category.id_for_label }}">Category *</label>
+                {{ form.category }}
+                {% if form.category.errors %}<div class="invalid-feedback d-block">{{ form.category.errors.0 }}</div>{% endif %}
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label" for="{{ form.price.id_for_label }}">Price (₹) *</label>
+                {{ form.price }}
+                {% if form.price.errors %}<div class="invalid-feedback d-block">{{ form.price.errors.0 }}</div>{% endif %}
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label" for="{{ form.pricing_unit.id_for_label }}">Pricing Unit *</label>
+                {{ form.pricing_unit }}
+              </div>
+
+              <div class="col-12">
+                <label class="form-label" for="{{ form.description.id_for_label }}">Description *</label>
+                {{ form.description }}
+                <div class="form-text">Describe your service in detail — what you offer, your experience, what customers can expect.</div>
+                {% if form.description.errors %}<div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>{% endif %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.city.id_for_label }}">City *</label>
+                {{ form.city }}
+                {% if form.city.errors %}<div class="invalid-feedback d-block">{{ form.city.errors.0 }}</div>{% endif %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.area.id_for_label }}">Area / Neighbourhood</label>
+                {{ form.area }}
+              </div>
+
+              <div class="col-12">
+                <label class="form-label" for="{{ form.availability.id_for_label }}">Availability</label>
+                {{ form.availability }}
+                <div class="form-text">e.g. Mon–Sat, 9 AM–6 PM</div>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label" for="{{ form.image.id_for_label }}">Service Image</label>
+                {% if service and service.image %}
+                <div class="mb-2">
+                  <img id="image-preview" src="{{ service.image.url }}" alt="Current service image"
+                       style="max-height:200px;border-radius:var(--radius-md);border:1px solid var(--color-border);">
+                </div>
+                {% else %}
+                <img id="image-preview" src="" alt="" style="display:none;max-height:200px;border-radius:var(--radius-md);margin-bottom:0.5rem;border:1px solid var(--color-border);">
+                {% endif %}
+                {{ form.image }}
+                <div class="form-text">Recommended: 800×600px or wider, under 5 MB. JPG, PNG, or WebP.</div>
+              </div>
+
+              <div class="col-12">
+                <div class="form-check d-flex align-items-center gap-2">
+                  {{ form.is_active }}
+                  <label class="form-check-label fw-semibold" for="{{ form.is_active.id_for_label }}">
+                    Make this service active (visible to customers)
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-flex gap-3 mt-4 flex-wrap">
+              <button type="submit" class="btn btn-primary">
+                {% if action == 'Edit' %}Save Changes{% else %}Create Service{% endif %}
+              </button>
+              <a href="{% url 'services:provider_dashboard' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

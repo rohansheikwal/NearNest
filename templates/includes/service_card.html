@@ -1,0 +1,92 @@
+{% load static %}
+{% load neighborly_tags %}
+{# Include: {% include 'includes/service_card.html' with service=service saved_ids=saved_ids %} #}
+{% service_image service card_section|default:'explore' card_index|default:0 as section_image %}
+{% with fallback_image=service.category.slug|category_image %}
+<div class="card service-card">
+  <div class="card-img-wrap">
+    {% if service.image %}
+      <a href="{{ service.get_absolute_url }}">
+        <img src="{{ service.image.url }}" alt="{{ service.title }}"
+             loading="lazy"
+             data-fallback="{% static section_image %}">
+      </a>
+    {% else %}
+      <a href="{{ service.get_absolute_url }}">
+        <img src="{% static section_image %}" alt="{{ service.category.name }} service" loading="lazy">
+      </a>
+    {% endif %}
+
+    {% if service.is_featured %}
+    <div style="position:absolute;top:10px;left:10px;">
+      <span class="badge" style="background:var(--color-accent);color:#fff;font-size:0.7rem;">
+        ★ Featured
+      </span>
+    </div>
+    {% endif %}
+
+    {% if user.is_authenticated and user.profile.is_customer %}
+    <button class="save-btn {% if service.id in saved_ids %}saved{% endif %}"
+            data-service-id="{{ service.id }}"
+            title="{% if service.id in saved_ids %}Remove from saved{% else %}Save service{% endif %}"
+            aria-label="{% if service.id in saved_ids %}Remove from saved{% else %}Save this service{% endif %}"
+            style="position:absolute;top:10px;right:10px;background:rgba(255,255,255,0.9);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="{% if service.id in saved_ids %}var(--color-accent){% else %}none{% endif %}" stroke="{% if service.id in saved_ids %}var(--color-accent){% else %}currentColor{% endif %}" stroke-width="2">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      </svg>
+    </button>
+    {% endif %}
+  </div>
+
+  <div class="card-body d-flex flex-column">
+    <span class="card-category">{{ service.category.name }}</span>
+    <h3 class="card-title mt-1">
+      <a href="{{ service.get_absolute_url }}" style="color:inherit;text-decoration:none;">{{ service.title }}</a>
+    </h3>
+
+    <div class="card-meta mb-1">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      {{ service.provider.profile.get_display_name }}
+    </div>
+
+    <div class="card-meta mb-2">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+        <circle cx="12" cy="10" r="3"/>
+      </svg>
+      {{ service.get_location_display }}
+    </div>
+
+    <p class="card-description">{{ service.description|truncatechars:100 }}</p>
+
+    {% with avg=service.get_average_rating count=service.get_review_count %}
+    {% if avg %}
+    <div class="d-flex align-items-center gap-1 mb-2">
+      <div class="stars" aria-label="{{ avg }} out of 5 stars">
+        {% for i in "12345" %}
+          {% if forloop.counter <= avg %}
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--color-accent)" stroke="var(--color-accent)" stroke-width="1.5" aria-hidden="true">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          {% else %}
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-border)" stroke-width="1.5" aria-hidden="true">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          {% endif %}
+        {% endfor %}
+      </div>
+      <span style="font-size:0.8rem;color:var(--color-text-muted);">{{ avg }} ({{ count }})</span>
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <div class="d-flex align-items-center justify-content-between mt-auto pt-2">
+      <div class="card-price">{{ service.get_price_display }}</div>
+      <a href="{{ service.get_absolute_url }}" class="btn btn-outline-primary btn-sm">View Details</a>
+    </div>
+</div>
+</div>
+{% endwith %}

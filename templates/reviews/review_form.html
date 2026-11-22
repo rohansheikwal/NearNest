@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}Write a Review — Neighborly{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-body p-4">
+          <div class="text-center mb-4">
+            <div style="width:56px;height:56px;border-radius:50%;background:rgba(200,148,58,0.12);color:var(--color-accent);display:flex;align-items:center;justify-content:center;margin:0 auto 0.75rem;">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="var(--color-accent)" stroke="var(--color-accent)" stroke-width="1.5" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <h1 style="font-size:1.4rem;font-weight:800;">Share Your Experience</h1>
+            <p class="text-muted" style="font-size:0.9rem;">Your honest feedback helps the community.</p>
+          </div>
+
+          <!-- Service summary -->
+          <div class="p-3 mb-4 rounded-3" style="background:var(--color-surface);border:1px solid var(--color-border);">
+            <div style="font-size:0.8rem;color:var(--color-text-light);margin-bottom:0.2rem;">Reviewing</div>
+            <strong style="font-size:0.95rem;">{{ service.title }}</strong>
+            <div style="font-size:0.83rem;color:var(--color-text-muted);">by {{ service.provider.profile.get_display_name }}</div>
+          </div>
+
+          <form method="POST" novalidate>
+            {% csrf_token %}
+
+            <div class="mb-4">
+              <label class="form-label">Your Rating *</label>
+              <!-- Star rating UI -->
+              <div class="rating-stars-input" role="group" aria-label="Star rating">
+                {% for i in "54321" %}
+                <input type="radio" name="rating" id="star{{ i }}" value="{{ i }}"
+                       class="rating-radio" {% if form.rating.value == i %}checked{% endif %} required>
+                <label for="star{{ i }}" class="rating-star-label" data-value="{{ i }}" aria-label="{{ i }} star{% if i != '1' %}s{% endif %}">★</label>
+                {% endfor %}
+              </div>
+              {% if form.rating.errors %}<div class="invalid-feedback d-block mt-1">{{ form.rating.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label" for="{{ form.comment.id_for_label }}">Your Review *</label>
+              {{ form.comment }}
+              {% if form.comment.errors %}<div class="invalid-feedback d-block">{{ form.comment.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="d-flex gap-3">
+              <button type="submit" class="btn btn-primary">Submit Review</button>
+              <a href="{% url 'bookings:request_detail' service_request.pk %}" class="btn btn-secondary">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+// Star rating interactive CSS
+document.querySelectorAll('.rating-star-label').forEach(label => {
+  label.addEventListener('mouseover', function() {
+    const val = parseInt(this.dataset.value);
+    document.querySelectorAll('.rating-star-label').forEach(l => {
+      l.style.color = parseInt(l.dataset.value) <= val ? 'var(--color-accent)' : 'var(--color-border)';
+    });
+  });
+  label.addEventListener('mouseout', function() {
+    const checked = document.querySelector('.rating-radio:checked');
+    if (checked) {
+      const val = parseInt(checked.value);
+      document.querySelectorAll('.rating-star-label').forEach(l => {
+        l.style.color = parseInt(l.dataset.value) <= val ? 'var(--color-accent)' : 'var(--color-border)';
+      });
+    } else {
+      document.querySelectorAll('.rating-star-label').forEach(l => l.style.color = '');
+    }
+  });
+});
+</script>
+{% endblock %}
+{% endblock %}

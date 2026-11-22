@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Provider Dashboard — Neighborly{% endblock %}
+
+{% block content %}
+<div class="dashboard-layout d-flex">
+
+  <!-- Sidebar -->
+  <nav class="dashboard-sidebar d-none d-lg-block" aria-label="Provider dashboard navigation">
+    <div class="px-4 mb-3">
+      <div class="d-flex align-items-center gap-2 mb-1">
+        {% if user.profile.profile_image %}
+          <img src="{{ user.profile.profile_image.url }}" alt="{{ user.profile.get_display_name }}"
+               class="profile-avatar" style="width:40px;height:40px;">
+        {% else %}
+          <div class="profile-avatar-placeholder" style="width:40px;height:40px;font-size:1.1rem;">
+            {{ user.profile.get_display_name|first|upper }}
+          </div>
+        {% endif %}
+        <div>
+          <div style="font-weight:700;font-size:0.9rem;">{{ user.profile.get_display_name|truncatechars:20 }}</div>
+          <div style="font-size:0.75rem;color:var(--color-text-muted);">Service Provider</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider mx-4"></div>
+
+    <a href="{% url 'services:provider_dashboard' %}" class="sidebar-link active" aria-current="page">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Overview
+    </a>
+    <a href="{% url 'services:service_create' %}" class="sidebar-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Service
+    </a>
+    <a href="{% url 'services:provider_requests' %}" class="sidebar-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Requests
+      {% if pending_requests.count %}
+      <span class="badge badge-warning ms-auto">{{ pending_requests.count }}</span>
+      {% endif %}
+    </a>
+    <a href="{% url 'services:provider_reviews' %}" class="sidebar-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      Reviews
+    </a>
+
+    <div class="divider mx-4 mt-3"></div>
+
+    <a href="{% url 'accounts:provider_profile' user.username %}?portal=provider" class="sidebar-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Public Profile
+    </a>
+    <a href="{% url 'accounts:profile_edit' %}?portal=provider" class="sidebar-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Profile Settings
+    </a>
+    <a href="{% url 'accounts:logout' %}?portal=provider" class="sidebar-link" onclick="return confirm('Log out?')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Logout
+    </a>
+  </nav>
+
+  <!-- Content -->
+  <main class="dashboard-content flex-grow-1">
+    <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
+      <div>
+        <h1 style="font-size:1.65rem;">Provider Dashboard</h1>
+        <p class="text-muted">Manage your services and customer requests</p>
+      </div>
+      <a href="{% url 'services:service_create' %}" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Service
+      </a>
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-3 mb-5">
+      <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+          <div class="stat-icon stat-icon-green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          </div>
+          <div>
+            <div class="stat-value">{{ active_services_count }}</div>
+            <div class="stat-label">Active Services</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+          <div class="stat-icon stat-icon-amber">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div>
+            <div class="stat-value">{{ pending_requests.count }}</div>
+            <div class="stat-label">Pending Requests</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+          <div class="stat-icon stat-icon-purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div>
+            <div class="stat-value">{{ inprogress_requests.count }}</div>
+            <div class="stat-label">In Progress</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+          <div class="stat-icon stat-icon-green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div>
+            <div class="stat-value">{{ completed_requests.count }}</div>
+            <div class="stat-label">Completed</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rating summary -->
+    {% if avg_rating %}
+    <div class="card mb-4" style="border:1px solid var(--color-border) !important;border-radius:var(--radius-lg);">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="stars">
+          {% for i in "12345" %}
+            {% if forloop.counter <= avg_rating %}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--color-accent)" stroke="var(--color-accent)" stroke-width="1.5" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            {% else %}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-border)" stroke-width="1.5" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            {% endif %}
+          {% endfor %}
+        </div>
+        <div>
+          <strong style="font-size:1.2rem;">{{ avg_rating|floatformat:1 }}</strong>
+          <span class="text-muted" style="font-size:0.87rem;"> average rating from {{ review_count }} review{{ review_count|pluralize }}</span>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Pending requests needing action -->
+    {% if pending_requests %}
+    <div class="mb-5">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 style="font-size:1.1rem;font-weight:700;margin:0;">
+          Pending Requests
+          <span class="badge badge-warning ms-2">{{ pending_requests.count }}</span>
+        </h2>
+        <a href="{% url 'services:provider_requests' %}" class="btn btn-secondary btn-sm">View All</a>
+      </div>
+      <div class="d-flex flex-column gap-3">
+        {% for req in pending_requests|slice:":5" %}
+        <div class="request-card">
+          <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+            <div>
+              <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge badge-warning">Pending</span>
+                <span style="font-size:0.8rem;color:var(--color-text-light);">#{{ req.pk }}</span>
+              </div>
+              <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.25rem;">{{ req.service.title }}</h3>
+              <div style="font-size:0.85rem;color:var(--color-text-muted);">
+                by {{ req.customer.profile.get_display_name }} · Requested: {{ req.requested_date|date:"d M Y" }}
+              </div>
+              {% if req.work_description %}
+              <p style="font-size:0.87rem;margin-top:0.5rem;margin-bottom:0;">{{ req.work_description|truncatechars:120 }}</p>
+              {% endif %}
+            </div>
+            <div>
+              <form method="POST" action="{% url 'services:update_request_status' req.pk %}" class="d-flex gap-2">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'services:provider_dashboard' %}">
+                <button type="submit" name="status" value="accepted" class="btn btn-primary btn-sm">Accept</button>
+                <button type="submit" name="status" value="rejected" class="btn btn-danger btn-sm"
+                        onclick="return confirm('Reject this request?')">Reject</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- My Services -->
+    <div>
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 style="font-size:1.1rem;font-weight:700;margin:0;">My Services</h2>
+        <a href="{% url 'services:service_create' %}" class="btn btn-primary btn-sm">+ Add New</a>
+      </div>
+
+      {% if my_services %}
+      <div class="card border-0" style="border:1px solid var(--color-border) !important;overflow:hidden;">
+        <div class="table-responsive">
+          <table class="table-custom w-100">
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for svc in my_services %}
+              <tr>
+                <td>
+                  <a href="{{ svc.get_absolute_url }}" class="fw-semibold text-decoration-none"
+                     style="color:var(--color-text);">{{ svc.title|truncatechars:35 }}</a>
+                  <div style="font-size:0.78rem;color:var(--color-text-light);">{{ svc.get_location_display }}</div>
+                </td>
+                <td style="font-size:0.85rem;">{{ svc.category.name }}</td>
+                <td style="font-size:0.85rem;font-weight:600;color:var(--color-primary);">{{ svc.get_price_display }}</td>
+                <td>
+                  {% if svc.is_active %}
+                  <span class="badge badge-success">Active</span>
+                  {% else %}
+                  <span class="badge badge-secondary">Inactive</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="d-flex gap-1 flex-wrap">
+                    <a href="{% url 'services:service_edit' svc.pk %}" class="btn btn-secondary btn-sm">Edit</a>
+                    <form method="POST" action="{% url 'services:toggle_active' svc.pk %}">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-secondary btn-sm">
+                        {% if svc.is_active %}Deactivate{% else %}Activate{% endif %}
+                      </button>
+                    </form>
+                    <a href="{% url 'services:service_delete' svc.pk %}" class="btn btn-danger btn-sm">Delete</a>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        </div>
+        <h4>No services yet</h4>
+        <p>Create your first service listing to start receiving requests.</p>
+        <a href="{% url 'services:service_create' %}" class="btn btn-primary">Add Your First Service</a>
+      </div>
+      {% endif %}
+    </div>
+  </main>
+</div>
+{% endblock %}

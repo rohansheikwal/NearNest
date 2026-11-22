@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}Request Service — Neighborly{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <h1>Request This Service</h1>
+    <p>Fill in your details and the provider will respond shortly.</p>
+  </div>
+</div>
+<div class="container py-5">
+  <div class="row g-5 justify-content-center">
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-body p-4">
+          <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:1.5rem;">Service Request Details</h2>
+          <form method="POST" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger mb-3" role="alert">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>
+            {% endif %}
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.requested_date.id_for_label }}">Preferred Date *</label>
+                {{ form.requested_date }}
+                {% if form.requested_date.errors %}<div class="invalid-feedback d-block">{{ form.requested_date.errors.0 }}</div>{% endif %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.requested_time.id_for_label }}">Preferred Time</label>
+                {{ form.requested_time }}
+              </div>
+              <div class="col-12">
+                <label class="form-label" for="{{ form.service_location.id_for_label }}">Service Location / Address *</label>
+                {{ form.service_location }}
+                <div class="form-text">Your general area or flat/building address. This will be shared with the provider if the request is accepted.</div>
+                {% if form.service_location.errors %}<div class="invalid-feedback d-block">{{ form.service_location.errors.0 }}</div>{% endif %}
+              </div>
+              <div class="col-12">
+                <label class="form-label" for="{{ form.work_description.id_for_label }}">Describe the Work *</label>
+                {{ form.work_description }}
+                {% if form.work_description.errors %}<div class="invalid-feedback d-block">{{ form.work_description.errors.0 }}</div>{% endif %}
+              </div>
+              <div class="col-12">
+                <label class="form-label" for="{{ form.notes.id_for_label }}">Additional Notes</label>
+                {{ form.notes }}
+              </div>
+            </div>
+            <div class="d-flex gap-3 mt-4 flex-wrap">
+              <button type="submit" class="btn btn-primary">Send Request</button>
+              <a href="{{ service.get_absolute_url }}" class="btn btn-secondary">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4 col-md-8">
+      <div class="card" style="position:sticky;top:88px;">
+        <div class="card-body p-4">
+          <h3 style="font-size:0.95rem;font-weight:700;margin-bottom:1rem;">Service Summary</h3>
+          {% if service.image %}
+          <img src="{{ service.image.url }}" alt="{{ service.title }}" style="width:100%;border-radius:var(--radius-md);margin-bottom:1rem;aspect-ratio:16/9;object-fit:cover;">
+          {% endif %}
+          <div class="card-category mb-1">{{ service.category.name }}</div>
+          <h4 style="font-size:1rem;font-weight:700;margin-bottom:0.5rem;">{{ service.title }}</h4>
+          <div style="font-size:0.85rem;color:var(--color-text-muted);margin-bottom:0.5rem;">
+            by {{ service.provider.profile.get_display_name }}
+          </div>
+          <div style="font-size:1.1rem;font-weight:700;color:var(--color-primary);">{{ service.get_price_display }}</div>
+          {% if service.availability %}
+          <div class="mt-2" style="font-size:0.82rem;color:var(--color-text-muted);">
+            <strong>Availability:</strong> {{ service.availability }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

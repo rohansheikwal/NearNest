@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load neighborly_tags %}
+{% block title %}{{ provider_profile.get_display_name }} — Neighborly{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="row g-5">
+    <div class="col-lg-4">
+      <div class="card" style="position:sticky;top:88px;">
+        <div class="card-body p-4 text-center">
+          {% if provider_profile.profile_image %}
+            <img src="{{ provider_profile.profile_image.url }}" alt="{{ provider_profile.get_display_name }}"
+                 class="profile-avatar mb-3" style="width:90px;height:90px;">
+          {% else %}
+            <div class="profile-avatar-placeholder mx-auto mb-3" style="width:90px;height:90px;font-size:2.2rem;">
+              {{ provider_profile.get_display_name|first|upper }}
+            </div>
+          {% endif %}
+
+          <h1 style="font-size:1.3rem;font-weight:800;margin-bottom:0.25rem;">{{ provider_profile.get_display_name }}</h1>
+          <div style="font-size:0.85rem;color:var(--color-text-muted);margin-bottom:0.75rem;">Service Provider</div>
+
+          {% if avg_rating %}
+          <div class="d-flex align-items-center justify-content-center gap-1 mb-1">
+            {% for i in "12345" %}
+              {% if forloop.counter <= avg_rating %}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--color-accent)" stroke="var(--color-accent)" stroke-width="1.5" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              {% else %}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-border)" stroke-width="1.5" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              {% endif %}
+            {% endfor %}
+            <span style="font-size:0.85rem;color:var(--color-text-muted);">({{ review_count }})</span>
+          </div>
+          {% endif %}
+
+          <div style="font-size:0.85rem;color:var(--color-text-muted);margin-bottom:1rem;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;margin-right:0.2rem" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            {{ provider_profile.get_location_display }}
+          </div>
+
+          {% if provider_profile.bio %}
+          <p style="font-size:0.87rem;color:var(--color-text-muted);line-height:1.65;text-align:left;">{{ provider_profile.bio }}</p>
+          {% endif %}
+
+          {% if provider_profile.skills %}
+          <div class="text-start mt-3">
+            <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-light);margin-bottom:0.5rem;">Skills</div>
+            <div class="d-flex flex-wrap gap-1">
+              {% for skill in provider_profile.skills|split:"," %}
+              <span class="badge badge-secondary">{{ skill|trim }}</span>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:1.25rem;">
+        Services by {{ provider_profile.get_display_name }}
+      </h2>
+
+      {% if services %}
+      <div class="row row-cols-1 row-cols-sm-2 g-4">
+        {% for service in services %}
+        <div class="col">
+          {% include 'includes/service_card.html' with service=service %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
+        <h4>No active services yet</h4>
+        <p>This provider hasn't listed any active services at the moment.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

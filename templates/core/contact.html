@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}Contact Us — Neighborly{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <h1>Contact Us</h1>
+    <p>Have a question or feedback? We'd love to hear from you.</p>
+  </div>
+</div>
+<div class="container py-5">
+  <div class="row g-5 justify-content-center">
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-body p-4">
+          <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:1.25rem;">Send Us a Message</h2>
+
+          <div class="alert alert-info mb-4" style="font-size:0.87rem;" role="note">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            Messages are stored and reviewed by the Neighborly team. Email delivery is not configured on this demonstration instance — we will not automatically be notified, but messages are saved in the system.
+          </div>
+
+          <form method="POST" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger mb-3" role="alert">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>
+            {% endif %}
+            <div class="row g-3">
+              <div class="col-sm-6">
+                <label class="form-label" for="{{ form.name.id_for_label }}">Your Name *</label>
+                {{ form.name }}
+                {% if form.name.errors %}<div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>{% endif %}
+              </div>
+              <div class="col-sm-6">
+                <label class="form-label" for="{{ form.email.id_for_label }}">Email Address *</label>
+                {{ form.email }}
+                {% if form.email.errors %}<div class="invalid-feedback d-block">{{ form.email.errors.0 }}</div>{% endif %}
+              </div>
+              <div class="col-12">
+                <label class="form-label" for="{{ form.subject.id_for_label }}">Subject *</label>
+                {{ form.subject }}
+                {% if form.subject.errors %}<div class="invalid-feedback d-block">{{ form.subject.errors.0 }}</div>{% endif %}
+              </div>
+              <div class="col-12">
+                <label class="form-label" for="{{ form.message.id_for_label }}">Message *</label>
+                {{ form.message }}
+                {% if form.message.errors %}<div class="invalid-feedback d-block">{{ form.message.errors.0 }}</div>{% endif %}
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-4">Send Message</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4 col-md-8">
+      <div class="card">
+        <div class="card-body p-4">
+          <h3 style="font-size:0.95rem;font-weight:700;margin-bottom:1rem;">Quick Links</h3>
+          <ul class="list-unstyled">
+            <li class="mb-3">
+              <a href="{% url 'core:faq' %}" class="d-flex align-items-center gap-2 text-decoration-none" style="color:var(--color-text);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <span style="font-size:0.9rem;">Check our FAQ</span>
+              </a>
+            </li>
+            <li class="mb-3">
+              <a href="{% url 'core:about' %}" class="d-flex align-items-center gap-2 text-decoration-none" style="color:var(--color-text);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span style="font-size:0.9rem;">About Neighborly</span>
+              </a>
+            </li>
+            <li>
+              <a href="{% url 'core:how_it_works' %}" class="d-flex align-items-center gap-2 text-decoration-none" style="color:var(--color-text);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                <span style="font-size:0.9rem;">How It Works</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

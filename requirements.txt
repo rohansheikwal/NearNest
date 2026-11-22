@@ -1,0 +1,11 @@
+# Neighborly — Python Package Requirements
+# Install with: pip install -r requirements.txt
+
+Django>=5.0,<6.2
+Pillow>=10.0
+django-crispy-forms>=2.1
+crispy-bootstrap5>=2024.2
+django-allauth>=0.63,<1.0
+requests>=2.31
+PyJWT>=2.9
+cryptography>=43
