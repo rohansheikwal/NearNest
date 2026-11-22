@@ -7,9 +7,19 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load environment variables from .env file if it exists
+_env_file = BASE_DIR / '.env'
+if _env_file.exists():
+    with open(_env_file, 'r', encoding='utf-8') as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith('#') and '=' in _line:
+                _k, _v = _line.split('=', 1)
+                os.environ.setdefault(_k.strip(), _v.strip())
+
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY') or os.urandom(50).hex()
 
-DEBUG = os.environ.get('DJANGO_DEBUG', '0').lower() in {'1', 'true', 'yes'}
+DEBUG = os.environ.get('DJANGO_DEBUG', '1').lower() in {'1', 'true', 'yes'}
 
 ALLOWED_HOSTS = [
     host.strip() for host in os.environ.get(
