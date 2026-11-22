@@ -14,11 +14,6 @@
         <div class="card-body p-4">
           <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:1.25rem;">Send Us a Message</h2>
 
-          <div class="alert alert-info mb-4" style="font-size:0.87rem;" role="note">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-            Messages are stored and reviewed by the Neighborly team. Email delivery is not configured on this demonstration instance — we will not automatically be notified, but messages are saved in the system.
-          </div>
-
           <form method="POST" novalidate>
             {% csrf_token %}
             {% if form.non_field_errors %}

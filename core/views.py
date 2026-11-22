@@ -1,9 +1,14 @@
+import logging
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from django.core.mail import send_mail
+from django.conf import settings
 from django.db.models import Count, Q
 from services.models import Service, ServiceCategory
 from .models import ContactMessage
 from .forms import ContactForm
+
+logger = logging.getLogger(__name__)
 
 
 def _one_service_per_provider_category(services, limit=None):
@@ -77,7 +82,32 @@ def contact(request):
     if request.method == 'POST':
         form = ContactForm(request.POST)
         if form.is_valid():
-            form.save()
+            contact_msg = form.save()
+
+            # Send email notification if recipient is configured
+            recipient = getattr(settings, 'CONTACT_NOTIFICATION_EMAIL', '') or getattr(settings, 'EMAIL_HOST_USER', '')
+            if recipient:
+                subject = f"[NearNest] New Contact Message: {contact_msg.subject}"
+                body = (
+                    f"You have received a new message from the NearNest Contact Form:\n\n"
+                    f"Name: {contact_msg.name}\n"
+                    f"Email: {contact_msg.email}\n"
+                    f"Subject: {contact_msg.subject}\n\n"
+                    f"Message:\n{contact_msg.message}\n\n"
+                    f"----------------------------------------\n"
+                    f"Sent automatically from NearNest"
+                )
+                try:
+                    send_mail(
+                        subject=subject,
+                        message=body,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[recipient],
+                        fail_silently=False,
+                    )
+                except Exception as ex:
+                    logger.warning("Could not send contact notification email: %s", ex)
+
             messages.success(request, "Thank you! Your message has been received. We'll review it shortly.")
             return redirect('core:contact')
     else:
