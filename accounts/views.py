@@ -1,7 +1,10 @@
+import logging
+import secrets
+from datetime import timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.conf import settings
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
@@ -9,6 +12,9 @@ from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib import messages
 from django.contrib.auth.models import User
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme, urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from .forms import (
@@ -18,8 +24,13 @@ from .forms import (
     ProfileEditForm,
     CustomPasswordResetForm,
     CustomSetPasswordForm,
+    ForgotPasswordRequestForm,
+    OTPVerificationForm,
+    ResetPasswordConfirmForm,
 )
-from .models import Profile
+from .models import Profile, PasswordResetOTP
+
+logger = logging.getLogger(__name__)
 from services.models import Service
 from bookings.models import ServiceRequest
 
@@ -185,42 +196,226 @@ def provider_public_profile(request, username):
     return render(request, 'accounts/provider_public_profile.html', context)
 
 
-class CustomPasswordResetView(auth_views.PasswordResetView):
-    form_class = CustomPasswordResetForm
-    template_name = 'accounts/password_reset.html'
-    email_template_name = 'accounts/password_reset_email.txt'
-    subject_template_name = 'accounts/password_reset_subject.txt'
-    success_url = reverse_lazy('accounts:password_reset_done')
+def _mask_email(email):
+    """Return masked email like ro***al@gmail.com for display."""
+    if not email or '@' not in email:
+        return email
+    local, domain = email.split('@', 1)
+    if len(local) <= 2:
+        masked_local = local[0] + '*'
+    elif len(local) <= 4:
+        masked_local = local[0] + '*' * (len(local) - 2) + local[-1]
+    else:
+        masked_local = local[:2] + '*' * (len(local) - 4) + local[-2:]
+    return f"{masked_local}@{domain}"
 
-    def form_valid(self, form):
-        opts = {
-            'use_https': self.request.is_secure(),
-            'token_generator': self.token_generator,
-            'from_email': self.from_email,
-            'email_template_name': self.email_template_name,
-            'subject_template_name': self.subject_template_name,
-            'request': self.request,
-            'html_email_template_name': self.html_email_template_name,
-            'extra_email_context': self.extra_email_context,
-            'domain_override': self.request.get_host(),
-        }
-        form.save(**opts)
-        email = form.cleaned_data.get('email')
-        user = User.objects.filter(email__iexact=email, is_active=True).first()
-        if user and settings.EMAIL_BACKEND.endswith('console.EmailBackend'):
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = default_token_generator.make_token(user)
-            self.request.session['dev_reset_url'] = reverse('accounts:password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
-            self.request.session['dev_reset_email'] = email
-        return HttpResponseRedirect(self.get_success_url())
+
+def _send_otp_email(user, email):
+    """Generate 6-digit OTP, store hashed, and send NearNest branded email."""
+    otp_code = f"{secrets.randbelow(900000) + 100000}"
+    expires_at = timezone.now() + timedelta(minutes=PasswordResetOTP.EXPIRY_MINUTES)
+    otp_hash = PasswordResetOTP.hash_otp(otp_code)
+
+    # Invalidate previous unused OTPs for this email
+    PasswordResetOTP.objects.filter(email__iexact=email, is_used=False).update(is_used=True)
+
+    # Create new OTP record
+    PasswordResetOTP.objects.create(
+        user=user,
+        email=email,
+        otp_hash=otp_hash,
+        expires_at=expires_at,
+    )
+
+    user_name = user.profile.get_display_name() if hasattr(user, 'profile') else (user.get_full_name() or user.username)
+    context = {
+        'user_name': user_name,
+        'user_email': email,
+        'otp': otp_code,
+        'expires_time': expires_at.strftime('%I:%M %p'),
+    }
+
+    html_content = render_to_string('accounts/password_reset_otp_email.html', context)
+    text_content = render_to_string('accounts/password_reset_otp_email.txt', context)
+
+    subject = "Your NearNest Password Reset Verification Code"
+    msg = EmailMultiAlternatives(
+        subject=subject,
+        body=text_content,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[email],
+    )
+    msg.attach_alternative(html_content, "text/html")
+    msg.send(fail_silently=False)
+    return True
+
+
+def password_reset_request(request):
+    """Step 1: Enter email and send 6-digit OTP."""
+    if request.user.is_authenticated:
+        return redirect('core:home')
+
+    if request.method == 'POST':
+        form = ForgotPasswordRequestForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            user = User.objects.filter(email__iexact=email, is_active=True).first()
+
+            # Check 60-second cooldown
+            last_otp = PasswordResetOTP.objects.filter(email__iexact=email).order_by('-created_at').first()
+            if last_otp:
+                elapsed = (timezone.now() - last_otp.created_at).total_seconds()
+                if elapsed < PasswordResetOTP.COOLDOWN_SECONDS:
+                    remaining = int(PasswordResetOTP.COOLDOWN_SECONDS - elapsed)
+                    messages.warning(request, f"Please wait {remaining} seconds before requesting a new OTP.")
+                    request.session['reset_email'] = email
+                    return redirect('accounts:password_reset_verify_otp')
+
+            try:
+                _send_otp_email(user, email)
+                request.session['reset_email'] = email
+                messages.success(request, f"A 6-digit verification code has been sent to {email}.")
+                return redirect('accounts:password_reset_verify_otp')
+            except Exception as ex:
+                logger.error("Failed to send password reset OTP: %s", ex)
+                messages.error(request, "Unable to send verification email. Please check your email configuration or try again later.")
+    else:
+        form = ForgotPasswordRequestForm()
+
+    return render(request, 'accounts/password_reset.html', {'form': form})
+
+
+def password_reset_verify_otp(request):
+    """Step 2: Enter and verify 6-digit OTP."""
+    if request.user.is_authenticated:
+        return redirect('core:home')
+
+    email = request.session.get('reset_email')
+    if not email:
+        messages.info(request, "Please enter your email to request an OTP.")
+        return redirect('accounts:password_reset')
+
+    otp_record = PasswordResetOTP.objects.filter(email__iexact=email).order_by('-created_at').first()
+    if not otp_record:
+        messages.error(request, "No active OTP request found. Please request a new code.")
+        return redirect('accounts:password_reset')
+
+    elapsed = (timezone.now() - otp_record.created_at).total_seconds()
+    cooldown_remaining = max(0, int(PasswordResetOTP.COOLDOWN_SECONDS - elapsed))
+
+    if request.method == 'POST':
+        form = OTPVerificationForm(request.POST)
+        if form.is_valid():
+            entered_otp = form.cleaned_data['otp']
+            is_valid, error_msg = otp_record.verify_otp(entered_otp)
+            if not is_valid:
+                messages.error(request, error_msg)
+            else:
+                otp_record.is_used = True
+                otp_record.reset_token = secrets.token_urlsafe(32)
+                otp_record.token_expires_at = timezone.now() + timedelta(minutes=10)
+                otp_record.save(update_fields=['is_used', 'reset_token', 'token_expires_at'])
+
+                request.session['reset_token'] = otp_record.reset_token
+                messages.success(request, "OTP verified successfully! Please enter your new password.")
+                return redirect('accounts:password_reset_set_password')
+    else:
+        form = OTPVerificationForm()
+
+    context = {
+        'form': form,
+        'email': email,
+        'masked_email': _mask_email(email),
+        'cooldown_remaining': cooldown_remaining,
+    }
+    return render(request, 'accounts/password_reset_verify_otp.html', context)
+
+
+def password_reset_resend_otp(request):
+    """Resend a new 6-digit OTP with 60-second cooldown."""
+    if request.method != 'POST':
+        return redirect('accounts:password_reset_verify_otp')
+
+    email = request.session.get('reset_email')
+    if not email:
+        messages.error(request, "Session expired. Please enter your email again.")
+        return redirect('accounts:password_reset')
+
+    user = User.objects.filter(email__iexact=email, is_active=True).first()
+    if not user:
+        messages.error(request, "Account not found. Please start over.")
+        return redirect('accounts:password_reset')
+
+    last_otp = PasswordResetOTP.objects.filter(email__iexact=email).order_by('-created_at').first()
+    if last_otp:
+        elapsed = (timezone.now() - last_otp.created_at).total_seconds()
+        if elapsed < PasswordResetOTP.COOLDOWN_SECONDS:
+            remaining = int(PasswordResetOTP.COOLDOWN_SECONDS - elapsed)
+            messages.warning(request, f"Please wait {remaining} seconds before requesting a new code.")
+            return redirect('accounts:password_reset_verify_otp')
+
+    try:
+        _send_otp_email(user, email)
+        messages.success(request, "A new 6-digit verification code has been sent to your email.")
+    except Exception as ex:
+        logger.error("Failed to resend OTP: %s", ex)
+        messages.error(request, "Failed to send verification code. Please try again later.")
+
+    return redirect('accounts:password_reset_verify_otp')
+
+
+def password_reset_set_password(request):
+    """Step 3: Reset password with validation and show/hide functionality."""
+    if request.user.is_authenticated:
+        return redirect('core:home')
+
+    reset_token = request.session.get('reset_token')
+    if not reset_token:
+        messages.error(request, "Unauthorized or expired reset session. Please request a new OTP.")
+        return redirect('accounts:password_reset')
+
+    otp_record = PasswordResetOTP.objects.filter(
+        reset_token=reset_token,
+        token_expires_at__gte=timezone.now(),
+    ).select_related('user').first()
+
+    if not otp_record or not otp_record.user.is_active:
+        messages.error(request, "Password reset session has expired. Please verify your OTP again.")
+        request.session.pop('reset_token', None)
+        return redirect('accounts:password_reset')
+
+    user = otp_record.user
+
+    if request.method == 'POST':
+        form = ResetPasswordConfirmForm(request.POST, user=user)
+        if form.is_valid():
+            form.save()
+
+            # Invalidate reset token and clear reset session
+            otp_record.reset_token = None
+            otp_record.save(update_fields=['reset_token'])
+            request.session.pop('reset_token', None)
+            request.session.pop('reset_email', None)
+
+            messages.success(request, "Your password has been changed successfully! You can now sign in.")
+            return redirect('accounts:password_reset_done')
+    else:
+        form = ResetPasswordConfirmForm(user=user)
+
+    return render(request, 'accounts/password_reset_confirm.html', {'form': form, 'user': user})
+
+
+def password_reset_done(request):
+    """Step 4: Password reset completed confirmation."""
+    return render(request, 'accounts/password_reset_done.html')
+
+
+# Legacy class-based views kept for backwards compatibility
+class CustomPasswordResetView(auth_views.PasswordResetView):
+    def dispatch(self, request, *args, **kwargs):
+        return redirect('accounts:password_reset')
 
 
 class CustomPasswordResetDoneView(auth_views.PasswordResetDoneView):
-    template_name = 'accounts/password_reset_done.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['dev_reset_url'] = self.request.session.pop('dev_reset_url', None)
-        context['dev_reset_email'] = self.request.session.pop('dev_reset_email', None)
-        context['is_console_backend'] = settings.EMAIL_BACKEND.endswith('console.EmailBackend')
-        return context
+    def dispatch(self, request, *args, **kwargs):
+        return redirect('accounts:password_reset_done')

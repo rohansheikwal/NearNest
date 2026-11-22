@@ -1,7 +1,63 @@
+import hashlib
+import secrets
+from datetime import timedelta
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
+
+
+class PasswordResetOTP(models.Model):
+    MAX_ATTEMPTS = 5
+    EXPIRY_MINUTES = 5
+    COOLDOWN_SECONDS = 60
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='password_reset_otps')
+    email = models.EmailField(db_index=True)
+    otp_hash = models.CharField(max_length=64)  # SHA-256 hash of the 6-digit OTP
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    is_used = models.BooleanField(default=False)
+    reset_token = models.CharField(max_length=64, blank=True, null=True, unique=True)
+    token_expires_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'Password Reset OTP'
+        verbose_name_plural = 'Password Reset OTPs'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"OTP for {self.email} ({self.created_at.strftime('%Y-%m-%d %H:%M:%S')})"
+
+    @classmethod
+    def hash_otp(cls, otp_str):
+        return hashlib.sha256(otp_str.strip().encode('utf-8')).hexdigest()
+
+    def verify_otp(self, entered_otp):
+        """Verify entered OTP. Returns (is_valid: bool, error_msg: str)."""
+        if self.is_used:
+            return False, "This OTP has already been used. Please request a new one."
+        if timezone.now() > self.expires_at:
+            return False, "This OTP has expired. Please request a new one."
+        if self.attempts >= self.MAX_ATTEMPTS:
+            return False, "Maximum verification attempts exceeded. Please request a new OTP."
+
+        hashed_input = self.hash_otp(entered_otp)
+        if secrets.compare_digest(self.otp_hash, hashed_input):
+            return True, ""
+
+        self.attempts += 1
+        self.save(update_fields=['attempts'])
+        remaining = max(0, self.MAX_ATTEMPTS - self.attempts)
+        if remaining > 0:
+            return False, f"Invalid OTP. You have {remaining} attempt(s) remaining."
+        return False, "Maximum verification attempts exceeded. Please request a new OTP."
+
+    @property
+    def is_expired(self):
+        return timezone.now() > self.expires_at
 
 
 class Profile(models.Model):

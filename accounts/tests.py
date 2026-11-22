@@ -1,10 +1,12 @@
+from datetime import timedelta
+import re
 from django.test import TestCase
-
+from django.utils import timezone
 from django.contrib.auth.models import User
 from django.core import mail
 from django.urls import reverse
 
-from .models import Profile
+from .models import Profile, PasswordResetOTP
 
 
 class AuthenticationAndProfileTests(TestCase):
@@ -188,41 +190,161 @@ class AuthenticationAndProfileTests(TestCase):
 
         self.assertRedirects(response, reverse('core:home'))
 
-    def test_password_reset_flow_is_available(self):
+    def test_otp_password_reset_full_flow(self):
+        """Test complete 4-step OTP password reset flow."""
         user = User.objects.create_user(
             username='resetuser',
             email='reset@example.com',
             password='OldStrongPass123!',
         )
 
-        response = self.client.get(reverse('accounts:password_reset'))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Reset your password')
+        # 1. Page loads
+        resp = self.client.get(reverse('accounts:password_reset'))
+        self.assertEqual(resp.status_code, 200)
 
-        response = self.client.post(reverse('accounts:password_reset'), {
+        # 2. Submit registered email -> OTP generated & emailed
+        resp = self.client.post(reverse('accounts:password_reset'), {
             'email': user.email,
         })
-        self.assertRedirects(response, reverse('accounts:password_reset_done'))
+        self.assertRedirects(resp, reverse('accounts:password_reset_verify_otp'))
+        self.assertEqual(len(mail.outbox), 1)
+        email_body = mail.outbox[0].body
+        self.assertIn('NearNest', email_body)
+        self.assertIn('5 minutes', email_body)
+
+        # Extract 6-digit OTP from email
+        otp_match = re.search(r'\b\d{6}\b', email_body)
+        self.assertIsNotNone(otp_match)
+        otp_code = otp_match.group(0)
+
+        # Verify OTP is hashed in DB, never plain text
+        otp_record = PasswordResetOTP.objects.get(email=user.email)
+        self.assertNotEqual(otp_record.otp_hash, otp_code)
+        self.assertEqual(otp_record.otp_hash, PasswordResetOTP.hash_otp(otp_code))
+
+        # 3. Verify correct OTP -> Redirects to set password
+        verify_resp = self.client.post(reverse('accounts:password_reset_verify_otp'), {
+            'otp': otp_code,
+        })
+        self.assertRedirects(verify_resp, reverse('accounts:password_reset_set_password'))
+        otp_record.refresh_from_db()
+        self.assertTrue(otp_record.is_used)
+        self.assertTrue(otp_record.reset_token)
+
+        # 4. Attempt mismatched password on set-password page -> Rejected
+        mismatch_resp = self.client.post(reverse('accounts:password_reset_set_password'), {
+            'new_password1': 'BrandNewPass123!',
+            'new_password2': 'DoesNotMatch123!',
+        })
+        self.assertEqual(mismatch_resp.status_code, 200)
+        self.assertIn('new_password2', mismatch_resp.context['form'].errors)
+
+        # 5. Submit valid matching new password -> Succeeds
+        set_resp = self.client.post(reverse('accounts:password_reset_set_password'), {
+            'new_password1': 'BrandNewPass123!',
+            'new_password2': 'BrandNewPass123!',
+        })
+        self.assertRedirects(set_resp, reverse('accounts:password_reset_done'))
+
+        # 6. Verify old password no longer works
+        user.refresh_from_db()
+        self.assertFalse(self.client.login(username='resetuser', password='OldStrongPass123!'))
+
+        # 7. Verify new password works immediately
+        self.assertTrue(self.client.login(username='resetuser', password='BrandNewPass123!'))
+
+    def test_otp_password_reset_rejects_unregistered_email(self):
+        """Reject password reset request if email is not registered."""
+        response = self.client.post(reverse('accounts:password_reset'), {
+            'email': 'unknown@example.com',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('email', response.context['form'].errors)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_otp_verification_rejects_invalid_otp_and_tracks_attempts(self):
+        """Reject invalid OTP and enforce 5-attempt limit."""
+        user = User.objects.create_user(
+            username='attemptuser',
+            email='attempt@example.com',
+            password='OldPass123!',
+        )
+        self.client.post(reverse('accounts:password_reset'), {'email': user.email})
         self.assertEqual(len(mail.outbox), 1)
 
-        reset_url = next(
-            line for line in mail.outbox[0].body.splitlines()
-            if '/accounts/reset/' in line
-        )
-        response = self.client.get(reset_url.replace('http://testserver', ''))
-        self.assertEqual(response.status_code, 302)
+        otp_record = PasswordResetOTP.objects.get(email=user.email)
 
-        response = self.client.post(response.url, {
-            'new_password1': 'NewStrongPass123!',
-            'new_password2': 'NewStrongPass123!',
-        })
-        self.assertRedirects(response, reverse('accounts:password_reset_complete'))
-        self.assertTrue(self.client.login(
-            username='resetuser',
-            password='NewStrongPass123!',
-        ))
+        # Submit wrong OTP 4 times
+        for attempt in range(1, 5):
+            resp = self.client.post(reverse('accounts:password_reset_verify_otp'), {'otp': '000000'})
+            self.assertEqual(resp.status_code, 200)
+            otp_record.refresh_from_db()
+            self.assertEqual(otp_record.attempts, attempt)
+
+        # 5th attempt -> max attempts reached
+        resp5 = self.client.post(reverse('accounts:password_reset_verify_otp'), {'otp': '000000'})
+        self.assertEqual(resp5.status_code, 200)
+        otp_record.refresh_from_db()
+        self.assertEqual(otp_record.attempts, 5)
+
+        # Now even submitting the correct OTP is rejected because attempts exceeded
+        correct_otp = re.search(r'\b\d{6}\b', mail.outbox[0].body).group(0)
+        resp_after_lock = self.client.post(reverse('accounts:password_reset_verify_otp'), {'otp': correct_otp})
+        self.assertEqual(resp_after_lock.status_code, 200)
+        self.assertContains(resp_after_lock, 'Maximum verification attempts exceeded')
+
+    def test_otp_verification_rejects_expired_otp(self):
+        """Reject OTP that has expired (>5 minutes)."""
+        user = User.objects.create_user(
+            username='expireduser',
+            email='expired@example.com',
+            password='OldPass123!',
+        )
+        self.client.post(reverse('accounts:password_reset'), {'email': user.email})
+        correct_otp = re.search(r'\b\d{6}\b', mail.outbox[0].body).group(0)
+
+        # Manually expire the OTP
+        otp_record = PasswordResetOTP.objects.get(email=user.email)
+        otp_record.expires_at = timezone.now() - timedelta(minutes=1)
+        otp_record.save()
+
+        resp = self.client.post(reverse('accounts:password_reset_verify_otp'), {'otp': correct_otp})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'expired')
+
+    def test_otp_resend_and_cooldown(self):
+        """Verify 60-second cooldown on OTP resend."""
+        user = User.objects.create_user(
+            username='cooldownuser',
+            email='cooldown@example.com',
+            password='OldPass123!',
+        )
+        self.client.post(reverse('accounts:password_reset'), {'email': user.email})
+        self.assertEqual(len(mail.outbox), 1)
+
+        # Immediate resend should be blocked by 60s cooldown
+        resend_blocked = self.client.post(reverse('accounts:password_reset_resend_otp'))
+        self.assertRedirects(resend_blocked, reverse('accounts:password_reset_verify_otp'))
+        self.assertEqual(len(mail.outbox), 1)  # No new email sent
+
+        # Simulate cooldown elapsed (>60s)
+        otp_record = PasswordResetOTP.objects.get(email=user.email)
+        otp_record.created_at = timezone.now() - timedelta(seconds=65)
+        otp_record.save()
+
+        # Resend should now succeed and send a new OTP
+        resend_ok = self.client.post(reverse('accounts:password_reset_resend_otp'))
+        self.assertRedirects(resend_ok, reverse('accounts:password_reset_verify_otp'))
+        self.assertEqual(len(mail.outbox), 2)  # New email sent
+        self.assertEqual(PasswordResetOTP.objects.filter(email=user.email).count(), 2)
+
+    def test_cannot_access_set_password_without_otp_verification(self):
+        """Ensure reset password page is protected and cannot be bypassed."""
+        resp = self.client.get(reverse('accounts:password_reset_set_password'))
+        self.assertRedirects(resp, reverse('accounts:password_reset'))
 
     def test_password_reset_works_for_oauth_user_with_unusable_password(self):
+        """OAuth users with unusable passwords can set a password via OTP."""
         user = User.objects.create_user(
             username='oauthuser',
             email='oauthuser@example.com',
@@ -231,67 +353,18 @@ class AuthenticationAndProfileTests(TestCase):
         user.save()
         self.assertFalse(user.has_usable_password())
 
-        response = self.client.post(reverse('accounts:password_reset'), {
-            'email': user.email,
-        })
-        self.assertRedirects(response, reverse('accounts:password_reset_done'))
-        self.assertEqual(len(mail.outbox), 1)
+        self.client.post(reverse('accounts:password_reset'), {'email': user.email})
+        otp_code = re.search(r'\b\d{6}\b', mail.outbox[0].body).group(0)
 
-        reset_url = next(
-            line for line in mail.outbox[0].body.splitlines()
-            if '/accounts/reset/' in line
-        )
-        confirm_resp = self.client.get(reset_url.replace('http://testserver', ''))
-        self.assertEqual(confirm_resp.status_code, 302)
-
-        set_resp = self.client.post(confirm_resp.url, {
+        self.client.post(reverse('accounts:password_reset_verify_otp'), {'otp': otp_code})
+        self.client.post(reverse('accounts:password_reset_set_password'), {
             'new_password1': 'NewOAuthPass123!',
             'new_password2': 'NewOAuthPass123!',
         })
-        self.assertRedirects(set_resp, reverse('accounts:password_reset_complete'))
+
         user.refresh_from_db()
         self.assertTrue(user.has_usable_password())
-        self.assertTrue(self.client.login(
-            username='oauthuser',
-            password='NewOAuthPass123!',
-        ))
-
-    def test_password_reset_does_not_reveal_unknown_email(self):
-        response = self.client.post(reverse('accounts:password_reset'), {
-            'email': 'unknown@example.com',
-        })
-
-        self.assertRedirects(response, reverse('accounts:password_reset_done'))
-        self.assertEqual(len(mail.outbox), 0)
-        self.assertContains(
-            self.client.get(reverse('accounts:password_reset_done')),
-            'If an account exists for that email address',
-        )
-
-    def test_password_reset_rejects_mismatched_new_passwords(self):
-        user = User.objects.create_user(
-            username='mismatchuser',
-            email='mismatch@example.com',
-            password='OldStrongPass123!',
-        )
-        self.client.post(reverse('accounts:password_reset'), {'email': user.email})
-        reset_url = next(
-            line for line in mail.outbox[0].body.splitlines()
-            if '/accounts/reset/' in line
-        ).replace('http://testserver', '')
-        response = self.client.get(reset_url)
-
-        response = self.client.post(response.url, {
-            'new_password1': 'NewStrongPass123!',
-            'new_password2': 'DifferentStrongPass123!',
-        })
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIn('new_password2', response.context['form'].errors)
-        self.assertTrue(self.client.login(
-            username='mismatchuser',
-            password='OldStrongPass123!',
-        ))
+        self.assertTrue(self.client.login(username='oauthuser', password='NewOAuthPass123!'))
 
     def test_profile_edit_does_not_allow_customer_to_set_provider_fields(self):
         user = User.objects.create_user(

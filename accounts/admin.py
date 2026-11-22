@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
-from .models import Profile
+from .models import Profile, PasswordResetOTP
 
 
 class ProfileInline(admin.StackedInline):
@@ -39,4 +39,13 @@ class ProfileAdmin(admin.ModelAdmin):
     list_filter = ['role', 'city']
     search_fields = ['user__username', 'user__email', 'full_name', 'city']
     readonly_fields = ['created_at', 'updated_at']
+    ordering = ['-created_at']
+
+
+@admin.register(PasswordResetOTP)
+class PasswordResetOTPAdmin(admin.ModelAdmin):
+    list_display = ['email', 'user', 'created_at', 'expires_at', 'attempts', 'is_used']
+    list_filter = ['is_used', 'created_at']
+    search_fields = ['email', 'user__username']
+    readonly_fields = ['created_at', 'expires_at', 'otp_hash', 'reset_token', 'token_expires_at']
     ordering = ['-created_at']

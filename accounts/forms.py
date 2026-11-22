@@ -1,6 +1,8 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.contrib.auth.forms import (
     UserCreationForm,
     AuthenticationForm,
@@ -177,6 +179,97 @@ class CustomSetPasswordForm(SetPasswordForm):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs['class'] = 'form-control'
+
+
+class ForgotPasswordRequestForm(forms.Form):
+    email = forms.EmailField(
+        label="Email address",
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your registered email address',
+            'autocomplete': 'email',
+            'autofocus': True,
+        })
+    )
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '').strip().lower()
+        if not email:
+            raise ValidationError("Please provide a valid email address.")
+        if not User.objects.filter(email__iexact=email, is_active=True).exists():
+            raise ValidationError("No active account found with this email address. Please check your spelling or register.")
+        return email
+
+
+class OTPVerificationForm(forms.Form):
+    otp = forms.CharField(
+        label="Verification Code",
+        max_length=6,
+        min_length=6,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control text-center',
+            'placeholder': '------',
+            'maxlength': '6',
+            'autocomplete': 'one-time-code',
+            'inputmode': 'numeric',
+            'pattern': '[0-9]{6}',
+            'style': 'font-size:1.75rem;letter-spacing:0.5rem;font-weight:700;font-family:monospace;max-width:280px;margin:0 auto;',
+            'autofocus': True,
+        })
+    )
+
+    def clean_otp(self):
+        otp = self.cleaned_data.get('otp', '').strip()
+        if not (otp.isdigit() and len(otp) == 6):
+            raise ValidationError("Please enter the complete 6-digit verification code.")
+        return otp
+
+
+class ResetPasswordConfirmForm(forms.Form):
+    new_password1 = forms.CharField(
+        label="New Password",
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your new password',
+            'autocomplete': 'new-password',
+            'id': 'id_new_password1',
+        }),
+        help_text="Password must be at least 8 characters long and contain letters and numbers.",
+    )
+    new_password2 = forms.CharField(
+        label="Confirm New Password",
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Confirm your new password',
+            'autocomplete': 'new-password',
+            'id': 'id_new_password2',
+        }),
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        p1 = cleaned_data.get('new_password1')
+        p2 = cleaned_data.get('new_password2')
+
+        if p1 and p2:
+            if p1 != p2:
+                self.add_error('new_password2', "Passwords do not match. Please re-enter.")
+            else:
+                try:
+                    validate_password(p1, self.user)
+                except ValidationError as error:
+                    self.add_error('new_password1', error)
+        return cleaned_data
+
+    def save(self):
+        new_password = self.cleaned_data['new_password1']
+        self.user.set_password(new_password)
+        self.user.save()
+        return self.user
 
 
 class ProfileEditForm(forms.ModelForm):
