@@ -164,7 +164,9 @@ else:
     EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() in {'1', 'true', 'yes'}
     DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'NearNest <webmaster@localhost>')
 
-CONTACT_NOTIFICATION_EMAIL = os.environ.get('CONTACT_NOTIFICATION_EMAIL', EMAIL_HOST_USER)
+EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', '10'))
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL') or os.environ.get('CONTACT_NOTIFICATION_EMAIL') or EMAIL_HOST_USER
+CONTACT_NOTIFICATION_EMAIL = ADMIN_EMAIL
 
 INTERNAL_IPS = [
     '127.0.0.1',

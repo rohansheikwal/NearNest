@@ -1,8 +1,10 @@
+from datetime import timedelta
 import logging
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.core.mail import send_mail
+from django.core.mail import EmailMessage
 from django.conf import settings
+from django.utils import timezone
 from django.db.models import Count, Q
 from services.models import Service, ServiceCategory
 from .models import ContactMessage
@@ -82,33 +84,75 @@ def contact(request):
     if request.method == 'POST':
         form = ContactForm(request.POST)
         if form.is_valid():
-            contact_msg = form.save()
+            name = form.cleaned_data['name']
+            email = form.cleaned_data['email']
+            subject = form.cleaned_data['subject']
+            message = form.cleaned_data['message']
 
-            # Send email notification if recipient is configured
-            recipient = getattr(settings, 'CONTACT_NOTIFICATION_EMAIL', '') or getattr(settings, 'EMAIL_HOST_USER', '')
-            if recipient:
-                subject = f"[NearNest] New Contact Message: {contact_msg.subject}"
-                body = (
-                    f"You have received a new message from the NearNest Contact Form:\n\n"
-                    f"Name: {contact_msg.name}\n"
-                    f"Email: {contact_msg.email}\n"
-                    f"Subject: {contact_msg.subject}\n\n"
-                    f"Message:\n{contact_msg.message}\n\n"
-                    f"----------------------------------------\n"
-                    f"Sent automatically from NearNest"
+            # Prevent duplicate submissions (same email, subject, message within 2 minutes)
+            two_mins_ago = timezone.now() - timedelta(minutes=2)
+            if ContactMessage.objects.filter(
+                email__iexact=email,
+                subject__iexact=subject,
+                message__iexact=message,
+                created_at__gte=two_mins_ago
+            ).exists():
+                messages.warning(
+                    request,
+                    "You have already submitted this exact message recently. Please wait a moment before sending again."
                 )
-                try:
-                    send_mail(
-                        subject=subject,
-                        message=body,
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=[recipient],
-                        fail_silently=False,
-                    )
-                except Exception as ex:
-                    logger.warning("Could not send contact notification email: %s", ex)
+                return redirect('core:contact')
 
-            messages.success(request, "Thank you! Your message has been received. We'll review it shortly.")
+            # Determine recipient admin email from configuration
+            admin_email = (
+                getattr(settings, 'ADMIN_EMAIL', None)
+                or getattr(settings, 'CONTACT_NOTIFICATION_EMAIL', None)
+                or getattr(settings, 'EMAIL_HOST_USER', None)
+                or 'admin@localhost'
+            )
+
+            email_subject = f"[NearNest Contact] {subject}"
+            email_body = (
+                f"You have received a new message from the NearNest Contact Form.\n\n"
+                f"--------------------------------------------------\n"
+                f"Sender Details:\n"
+                f"--------------------------------------------------\n"
+                f"Name:    {name}\n"
+                f"Email:   {email}\n"
+                f"Subject: {subject}\n\n"
+                f"--------------------------------------------------\n"
+                f"Message:\n"
+                f"--------------------------------------------------\n"
+                f"{message}\n\n"
+                f"--------------------------------------------------\n"
+                f"This message was sent via NearNest Contact Us form.\n"
+                f"You can reply directly to this email to respond to {name}."
+            )
+
+            try:
+                email_msg = EmailMessage(
+                    subject=email_subject,
+                    body=email_body,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    to=[admin_email],
+                    reply_to=[email],
+                )
+                email_msg.send(fail_silently=False)
+
+                # Persist message to database
+                form.save()
+
+                messages.success(
+                    request,
+                    "Thank you! Your message has been sent successfully. We will get back to you soon."
+                )
+            except Exception as ex:
+                logger.error("Failed to send contact notification email: %s", ex)
+                messages.error(
+                    request,
+                    "Sorry, an error occurred while delivering your message. Please check your email configuration or try again later."
+                )
+
             return redirect('core:contact')
     else:
         form = ContactForm()
