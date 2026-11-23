@@ -211,7 +211,17 @@ img { max-width: 100%; height: auto; display: block; }
   cursor: pointer;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
   gap: 0.4rem;
+}
+
+.btn.w-100 {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  width: 100% !important;
 }
 
 .btn-primary {
@@ -244,8 +254,28 @@ fieldset:disabled .btn-primary {
 }
 
 /* Hide Microsoft Edge / Chromium native password reveal button to prevent duplicate eye icons */
-input[type="password"]::-ms-reveal,
-input[type="password"]::-ms-clear {
+::-ms-reveal {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: none !important;
+}
+::-ms-clear {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: none !important;
+}
+input::-ms-reveal {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+input::-ms-clear {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
@@ -1289,39 +1319,44 @@ input[type="password"]::-ms-clear {
 
 /* Seamless Password Input with Embedded Eye Toggle */
 .password-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
+  position: relative !important;
+  width: 100% !important;
+  display: block !important;
 }
-.password-input-wrapper .form-control {
+.password-input-wrapper .form-control,
+.password-input-wrapper input.form-control,
+.password-input-wrapper input[type="password"],
+.password-input-wrapper input[type="text"] {
   padding-right: 48px !important;
-  width: 100%;
+  width: 100% !important;
+  display: block !important;
+  box-sizing: border-box !important;
 }
 .password-toggle-btn {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
+  position: absolute !important;
+  right: 12px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  color: #64748b;
-  padding: 6px 8px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  z-index: 5;
-  transition: color 0.15s ease, background 0.15s ease;
+  color: #64748b !important;
+  padding: 6px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+  z-index: 10 !important;
+  transition: color 0.15s ease, background 0.15s ease !important;
 }
 .password-toggle-btn:hover {
-  color: var(--color-primary);
+  color: var(--color-primary) !important;
   background: rgba(35, 76, 58, 0.08) !important;
 }
 .password-toggle-btn:focus {
-  outline: none;
-  box-shadow: none;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* 6-Box OTP Input Grid */
