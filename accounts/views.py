@@ -1,6 +1,8 @@
 import logging
 import secrets
 from datetime import timedelta
+from importlib import import_module
+from urllib.parse import urlencode
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.conf import settings
@@ -250,10 +252,56 @@ def _send_otp_email(user, email):
     return True
 
 
+def _sync_reset_session(request, **kwargs):
+    """Keep reset session state synchronized across both portal cookies if present."""
+    for key, val in kwargs.items():
+        if val is None:
+            request.session.pop(key, None)
+        else:
+            request.session[key] = val
+
+    SessionStore = import_module(settings.SESSION_ENGINE).SessionStore
+    for cookie_name in settings.PORTAL_SESSION_COOKIE_NAMES.values():
+        other_key = request.COOKIES.get(cookie_name)
+        if other_key and other_key != request.session.session_key:
+            try:
+                store = SessionStore(session_key=other_key)
+                for key, val in kwargs.items():
+                    if val is None:
+                        store.pop(key, None)
+                    else:
+                        store[key] = val
+                store.save()
+            except Exception:
+                pass
+
+
+def _get_reset_session_var(request, key):
+    """Retrieve reset variable from active session, fallback to other portal cookie."""
+    val = request.session.get(key)
+    if val:
+        return val
+    SessionStore = import_module(settings.SESSION_ENGINE).SessionStore
+    for cookie_name in settings.PORTAL_SESSION_COOKIE_NAMES.values():
+        other_key = request.COOKIES.get(cookie_name)
+        if other_key and other_key != request.session.session_key:
+            try:
+                store = SessionStore(session_key=other_key)
+                val = store.get(key)
+                if val:
+                    request.session[key] = val
+                    return val
+            except Exception:
+                pass
+    return None
+
+
 def password_reset_request(request):
     """Step 1: Enter email and send 6-digit OTP."""
     if request.user.is_authenticated:
         return redirect('core:home')
+
+    portal = request.GET.get('portal') or request.POST.get('portal') or getattr(request, 'portal', '')
 
     if request.method == 'POST':
         form = ForgotPasswordRequestForm(request.POST)
@@ -268,21 +316,27 @@ def password_reset_request(request):
                 if elapsed < PasswordResetOTP.COOLDOWN_SECONDS:
                     remaining = int(PasswordResetOTP.COOLDOWN_SECONDS - elapsed)
                     messages.warning(request, f"Please wait {remaining} seconds before requesting a new OTP.")
-                    request.session['reset_email'] = email
-                    return redirect('accounts:password_reset_verify_otp')
+                    _sync_reset_session(request, reset_email=email)
+                    verify_url = reverse('accounts:password_reset_verify_otp')
+                    if portal == 'provider':
+                        verify_url = f"{verify_url}?portal=provider"
+                    return redirect(verify_url)
 
             try:
                 _send_otp_email(user, email)
-                request.session['reset_email'] = email
+                _sync_reset_session(request, reset_email=email)
                 messages.success(request, f"A 6-digit verification code has been sent to {email}.")
-                return redirect('accounts:password_reset_verify_otp')
+                verify_url = reverse('accounts:password_reset_verify_otp')
+                if portal == 'provider':
+                    verify_url = f"{verify_url}?portal=provider"
+                return redirect(verify_url)
             except Exception as ex:
                 logger.error("Failed to send password reset OTP: %s", ex)
                 messages.error(request, "Unable to send verification email. Please check your email configuration or try again later.")
     else:
         form = ForgotPasswordRequestForm()
 
-    return render(request, 'accounts/password_reset.html', {'form': form})
+    return render(request, 'accounts/password_reset.html', {'form': form, 'portal': portal})
 
 
 def password_reset_verify_otp(request):
@@ -290,15 +344,27 @@ def password_reset_verify_otp(request):
     if request.user.is_authenticated:
         return redirect('core:home')
 
-    email = request.session.get('reset_email')
+    portal = request.GET.get('portal') or request.POST.get('portal') or getattr(request, 'portal', '')
+    email = (
+        request.GET.get('email')
+        or request.POST.get('email')
+        or _get_reset_session_var(request, 'reset_email')
+    )
+
+    reset_url = reverse('accounts:password_reset')
+    if portal == 'provider':
+        reset_url = f"{reset_url}?portal=provider"
+
     if not email:
         messages.info(request, "Please enter your email to request an OTP.")
-        return redirect('accounts:password_reset')
+        return redirect(reset_url)
+
+    _sync_reset_session(request, reset_email=email)
 
     otp_record = PasswordResetOTP.objects.filter(email__iexact=email).order_by('-created_at').first()
     if not otp_record:
         messages.error(request, "No active OTP request found. Please request a new code.")
-        return redirect('accounts:password_reset')
+        return redirect(reset_url)
 
     elapsed = (timezone.now() - otp_record.created_at).total_seconds()
     cooldown_remaining = max(0, int(PasswordResetOTP.COOLDOWN_SECONDS - elapsed))
@@ -316,9 +382,13 @@ def password_reset_verify_otp(request):
                 otp_record.token_expires_at = timezone.now() + timedelta(minutes=10)
                 otp_record.save(update_fields=['is_used', 'reset_token', 'token_expires_at'])
 
-                request.session['reset_token'] = otp_record.reset_token
+                _sync_reset_session(request, reset_token=otp_record.reset_token, reset_email=email)
                 messages.success(request, "OTP verified successfully! Please enter your new password.")
-                return redirect('accounts:password_reset_set_password')
+
+                set_pwd_url = reverse('accounts:password_reset_set_password')
+                if portal == 'provider':
+                    set_pwd_url = f"{set_pwd_url}?portal=provider"
+                return redirect(set_pwd_url)
     else:
         form = OTPVerificationForm()
 
@@ -327,24 +397,40 @@ def password_reset_verify_otp(request):
         'email': email,
         'masked_email': _mask_email(email),
         'cooldown_remaining': cooldown_remaining,
+        'portal': portal,
     }
     return render(request, 'accounts/password_reset_verify_otp.html', context)
 
 
 def password_reset_resend_otp(request):
     """Resend a new 6-digit OTP with 60-second cooldown."""
-    if request.method != 'POST':
-        return redirect('accounts:password_reset_verify_otp')
+    portal = request.GET.get('portal') or request.POST.get('portal') or getattr(request, 'portal', '')
+    verify_url = reverse('accounts:password_reset_verify_otp')
+    if portal == 'provider':
+        verify_url = f"{verify_url}?portal=provider"
 
-    email = request.session.get('reset_email')
+    if request.method != 'POST':
+        return redirect(verify_url)
+
+    email = (
+        request.POST.get('email')
+        or request.GET.get('email')
+        or _get_reset_session_var(request, 'reset_email')
+    )
+
+    reset_url = reverse('accounts:password_reset')
+    if portal == 'provider':
+        reset_url = f"{reset_url}?portal=provider"
+
     if not email:
         messages.error(request, "Session expired. Please enter your email again.")
-        return redirect('accounts:password_reset')
+        return redirect(reset_url)
 
+    _sync_reset_session(request, reset_email=email)
     user = User.objects.filter(email__iexact=email, is_active=True).first()
     if not user:
         messages.error(request, "Account not found. Please start over.")
-        return redirect('accounts:password_reset')
+        return redirect(reset_url)
 
     last_otp = PasswordResetOTP.objects.filter(email__iexact=email).order_by('-created_at').first()
     if last_otp:
@@ -352,7 +438,7 @@ def password_reset_resend_otp(request):
         if elapsed < PasswordResetOTP.COOLDOWN_SECONDS:
             remaining = int(PasswordResetOTP.COOLDOWN_SECONDS - elapsed)
             messages.warning(request, f"Please wait {remaining} seconds before requesting a new code.")
-            return redirect('accounts:password_reset_verify_otp')
+            return redirect(verify_url)
 
     try:
         _send_otp_email(user, email)
@@ -361,7 +447,7 @@ def password_reset_resend_otp(request):
         logger.error("Failed to resend OTP: %s", ex)
         messages.error(request, "Failed to send verification code. Please try again later.")
 
-    return redirect('accounts:password_reset_verify_otp')
+    return redirect(verify_url)
 
 
 def password_reset_set_password(request):
@@ -369,10 +455,20 @@ def password_reset_set_password(request):
     if request.user.is_authenticated:
         return redirect('core:home')
 
-    reset_token = request.session.get('reset_token')
+    portal = request.GET.get('portal') or request.POST.get('portal') or getattr(request, 'portal', '')
+    reset_token = (
+        request.GET.get('token')
+        or request.POST.get('token')
+        or _get_reset_session_var(request, 'reset_token')
+    )
+
+    reset_url = reverse('accounts:password_reset')
+    if portal == 'provider':
+        reset_url = f"{reset_url}?portal=provider"
+
     if not reset_token:
         messages.error(request, "Unauthorized or expired reset session. Please request a new OTP.")
-        return redirect('accounts:password_reset')
+        return redirect(reset_url)
 
     otp_record = PasswordResetOTP.objects.filter(
         reset_token=reset_token,
@@ -381,9 +477,10 @@ def password_reset_set_password(request):
 
     if not otp_record or not otp_record.user.is_active:
         messages.error(request, "Password reset session has expired. Please verify your OTP again.")
-        request.session.pop('reset_token', None)
-        return redirect('accounts:password_reset')
+        _sync_reset_session(request, reset_token=None)
+        return redirect(reset_url)
 
+    _sync_reset_session(request, reset_token=reset_token)
     user = otp_record.user
 
     if request.method == 'POST':
@@ -394,15 +491,23 @@ def password_reset_set_password(request):
             # Invalidate reset token and clear reset session
             otp_record.reset_token = None
             otp_record.save(update_fields=['reset_token'])
-            request.session.pop('reset_token', None)
-            request.session.pop('reset_email', None)
+            _sync_reset_session(request, reset_token=None, reset_email=None)
 
             messages.success(request, "Your password has been changed successfully! You can now sign in.")
-            return redirect('accounts:password_reset_done')
+            done_url = reverse('accounts:password_reset_done')
+            if portal == 'provider':
+                done_url = f"{done_url}?portal=provider"
+            return redirect(done_url)
     else:
         form = ResetPasswordConfirmForm(user=user)
 
-    return render(request, 'accounts/password_reset_confirm.html', {'form': form, 'user': user})
+    context = {
+        'form': form,
+        'user': user,
+        'reset_token': reset_token,
+        'portal': portal,
+    }
+    return render(request, 'accounts/password_reset_confirm.html', context)
 
 
 def password_reset_done(request):

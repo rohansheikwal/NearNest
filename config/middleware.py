@@ -46,6 +46,10 @@ class PortalSessionMiddleware(SessionMiddleware):
             return 'provider'
         if request.path.startswith(('/accounts/register/customer/', '/accounts/dashboard/')):
             return 'customer'
+        if request.path.startswith('/accounts/password-reset/'):
+            if 'nearnest_provider_sessionid' in request.COOKIES and 'nearnest_customer_sessionid' not in request.COOKIES:
+                return 'provider'
+            return 'customer'
         if request.path.startswith('/bookings/'):
             # Customer-only paths
             if request.path.startswith(('/bookings/my-requests/', '/bookings/saved/')):
