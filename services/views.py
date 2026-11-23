@@ -163,8 +163,6 @@ def require_provider(view_func):
     @login_required
     def wrapper(request, *args, **kwargs):
         if not hasattr(request.user, 'profile') or not request.user.profile.is_provider:
-            if hasattr(request.user, 'profile') and request.user.profile.is_customer:
-                return redirect('accounts:customer_dashboard')
             messages.error(request, "This section is for service providers only.")
             return redirect('core:home')
         return view_func(request, *args, **kwargs)

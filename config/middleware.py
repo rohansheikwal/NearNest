@@ -12,6 +12,26 @@ from django.utils.http import http_date
 class PortalSessionMiddleware(SessionMiddleware):
     """Keep customer and provider/admin authentication in separate sessions."""
 
+    def _find_session_key_by_state(self, state_id):
+        """Recover an OAuth initiating session key directly from the database if cookies are missing or partitioned."""
+        if not state_id:
+            return None
+        try:
+            from django.contrib.sessions.models import Session
+            from django.utils import timezone
+            # Search recent unexpired sessions
+            for s in Session.objects.filter(expire_date__gte=timezone.now()).order_by('-expire_date')[:50]:
+                try:
+                    data = s.get_decoded()
+                    states = data.get('socialaccount_states', {})
+                    if isinstance(states, dict) and state_id in states:
+                        return s.session_key
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return None
+
     def _portal_for_request(self, request):
         path = request.path
 
@@ -46,6 +66,18 @@ class PortalSessionMiddleware(SessionMiddleware):
                         states = s.get('socialaccount_states', {})
                         if isinstance(states, dict) and state_id in states:
                             return p_name
+                # Check legacy/fallback cookie
+                legacy_key = request.COOKIES.get(settings.SESSION_COOKIE_NAME)
+                if legacy_key:
+                    s = self.SessionStore(legacy_key)
+                    states = s.get('socialaccount_states', {})
+                    if isinstance(states, dict) and state_id in states:
+                        return 'customer'
+                # Check database across recent sessions in case cookies were not forwarded or partitioned
+                found_key = self._find_session_key_by_state(state_id)
+                if found_key:
+                    request._oauth_restored_session_key = found_key
+                    return 'customer'
             if request.GET.get('portal') == 'provider':
                 return 'provider'
             return 'customer'
@@ -123,37 +155,57 @@ class PortalSessionMiddleware(SessionMiddleware):
         request.portal = self._portal_for_request(request)
         request.portal_cookie_name = settings.PORTAL_SESSION_COOKIE_NAMES[request.portal]
         request.switch_portal = lambda target: self.switch_portal(request, target)
-        cookie_name = request.portal_cookie_name
-        session_key = request.COOKIES.get(cookie_name)
 
-        # Allow existing users to transition from the old shared session cookie.
-        if not session_key and not any(
-            name in request.COOKIES
-            for name in settings.PORTAL_SESSION_COOKIE_NAMES.values()
-        ):
-            session_key = request.COOKIES.get(settings.SESSION_COOKIE_NAME)
-            request.using_legacy_session_cookie = bool(session_key)
-        else:
+        # Check if OAuth callback restored session directly from DB
+        restored_oauth_key = getattr(request, '_oauth_restored_session_key', None)
+        if restored_oauth_key:
+            session_key = restored_oauth_key
             request.using_legacy_session_cookie = False
+        else:
+            cookie_name = request.portal_cookie_name
+            session_key = request.COOKIES.get(cookie_name)
+
+            # Allow existing users to transition from the old shared session cookie.
+            if not session_key and not any(
+                name in request.COOKIES
+                for name in settings.PORTAL_SESSION_COOKIE_NAMES.values()
+            ):
+                session_key = request.COOKIES.get(settings.SESSION_COOKIE_NAME)
+                request.using_legacy_session_cookie = bool(session_key)
+            else:
+                request.using_legacy_session_cookie = False
 
         session = self.SessionStore(session_key)
 
         # Smart preservation: If the chosen portal session cookie is empty or has no logged-in user,
-        # but the alternate portal cookie has an authenticated user session, load that session!
-        # Do not override on auth pages (login/register) or when portal was explicitly requested in URL/POST.
+        # but another candidate cookie has an authenticated user session, load that session!
+        # Do not override on explicit auth pages (login/register).
         is_auth_page = request.path.startswith(('/accounts/login/', '/accounts/register/'))
-        has_explicit_portal = bool(request.GET.get('portal') or request.POST.get('portal'))
 
-        if not is_auth_page and not has_explicit_portal and not session.get('_auth_user_id'):
-            alt_portal = 'provider' if request.portal == 'customer' else 'customer'
-            alt_cookie = settings.PORTAL_SESSION_COOKIE_NAMES[alt_portal]
-            alt_key = request.COOKIES.get(alt_cookie)
-            if alt_key:
-                alt_session = self.SessionStore(alt_key)
-                if alt_session.get('_auth_user_id'):
-                    request.portal = alt_portal
-                    request.portal_cookie_name = alt_cookie
-                    session = alt_session
+        if not is_auth_page and not session.get('_auth_user_id'):
+            candidates = [
+                ('provider', settings.PORTAL_SESSION_COOKIE_NAMES.get('provider')),
+                ('customer', settings.PORTAL_SESSION_COOKIE_NAMES.get('customer')),
+                ('customer', settings.SESSION_COOKIE_NAME),
+            ]
+            for cand_portal, cand_cookie in candidates:
+                if not cand_cookie or cand_cookie == getattr(request, 'portal_cookie_name', None):
+                    continue
+                cand_key = request.COOKIES.get(cand_cookie)
+                if cand_key:
+                    cand_session = self.SessionStore(cand_key)
+                    if cand_session.get('_auth_user_id'):
+                        session = cand_session
+                        if request.path.startswith(('/services/provider/', '/admin/')):
+                            request.portal = 'provider'
+                            request.portal_cookie_name = settings.PORTAL_SESSION_COOKIE_NAMES['provider']
+                        elif request.path.startswith(('/accounts/dashboard/', '/bookings/')):
+                            request.portal = 'customer'
+                            request.portal_cookie_name = settings.PORTAL_SESSION_COOKIE_NAMES['customer']
+                        else:
+                            request.portal = cand_portal
+                            request.portal_cookie_name = cand_cookie
+                        break
 
         request.session = session
 
@@ -194,6 +246,7 @@ class PortalSessionMiddleware(SessionMiddleware):
                         raise SessionInterrupted(
                             'The request session was deleted before it completed.'
                         )
+                    # 1. Primary portal cookie
                     response.set_cookie(
                         cookie_name,
                         request.session.session_key,
@@ -205,9 +258,7 @@ class PortalSessionMiddleware(SessionMiddleware):
                         httponly=settings.SESSION_COOKIE_HTTPONLY or None,
                         samesite=settings.SESSION_COOKIE_SAMESITE,
                     )
-                    # Keep Django's conventional cookie synchronized for
-                    # clients/tests that inspect it directly. It is ignored
-                    # once either portal cookie exists.
+                    # 2. Standard Django session cookie for compatibility
                     response.set_cookie(
                         settings.SESSION_COOKIE_NAME,
                         request.session.session_key,
@@ -219,6 +270,24 @@ class PortalSessionMiddleware(SessionMiddleware):
                         httponly=settings.SESSION_COOKIE_HTTPONLY or None,
                         samesite=settings.SESSION_COOKIE_SAMESITE,
                     )
+                    # 3. If user is authenticated as provider, also ensure provider cookie is set
+                    auth_id = request.session.get('_auth_user_id')
+                    user_obj = getattr(request, 'user', None)
+                    if auth_id and user_obj and getattr(user_obj, 'is_authenticated', False):
+                        if hasattr(user_obj, 'profile') and user_obj.profile.is_provider:
+                            prov_cookie = settings.PORTAL_SESSION_COOKIE_NAMES['provider']
+                            if prov_cookie != cookie_name:
+                                response.set_cookie(
+                                    prov_cookie,
+                                    request.session.session_key,
+                                    max_age=max_age,
+                                    expires=expires,
+                                    domain=settings.SESSION_COOKIE_DOMAIN,
+                                    path=settings.SESSION_COOKIE_PATH,
+                                    secure=settings.SESSION_COOKIE_SECURE or None,
+                                    httponly=settings.SESSION_COOKIE_HTTPONLY or None,
+                                    samesite=settings.SESSION_COOKIE_SAMESITE,
+                                )
                     need_vary_cookie = True
         if need_vary_cookie:
             patch_vary_headers(response, ('Cookie',))

@@ -72,13 +72,11 @@ def register_provider(request):
 
 
 def user_login(request):
-    current_portal = getattr(request, 'portal', 'customer')
     if request.user.is_authenticated:
         is_provider = hasattr(request.user, 'profile') and request.user.profile.is_provider
-        if current_portal == 'provider' and is_provider:
+        if is_provider:
             return redirect('services:provider_dashboard')
-        elif current_portal == 'customer' and not is_provider:
-            return redirect('core:home')
+        return redirect('accounts:customer_dashboard')
 
     if request.method == 'POST':
         form = CustomLoginForm(request, data=request.POST)

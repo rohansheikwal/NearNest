@@ -8,6 +8,17 @@ document.addEventListener('DOMContentLoaded', function() {
   const eyeIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2.06 12.35a1 1 0 0 1 0-.7C3.85 7.72 7.62 5 12 5s8.15 2.72 9.94 6.65a1 1 0 0 1 0 .7C20.15 16.28 16.38 19 12 19s-8.15-2.72-9.94-6.65Z"/><circle cx="12" cy="12" r="3"/></svg>';
   const eyeOffIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m3 3 18 18"/><path d="M10.58 10.58a2 2 0 0 0 2.83 2.83"/><path d="M9.88 5.09A10.94 10.94 0 0 1 12 5c4.38 0 8.15 2.72 9.94 6.65a1 1 0 0 1 0 .7 11.03 11.03 0 0 1-3.02 3.78"/><path d="M6.61 6.61a11.04 11.04 0 0 0-4.55 5.04 1 1 0 0 0 0 .7A10.98 10.98 0 0 0 12 19c1.61 0 3.13-.35 4.5-.98"/></svg>';
   document.querySelectorAll('input[type="password"]').forEach(input => {
+    // Avoid double toggle buttons if the input is already inside a custom wrapper
+    // or already has an adjacent toggle button.
+    if (
+      input.closest('.password-field') ||
+      input.closest('.password-input-wrapper') ||
+      input.parentElement.querySelector('.password-toggle, .password-toggle-btn') ||
+      input.getAttribute('data-no-toggle') === 'true'
+    ) {
+      return;
+    }
+
     const wrapper = document.createElement('div');
     wrapper.className = 'password-field';
     input.parentNode.insertBefore(wrapper, input);
