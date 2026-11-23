@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}About Neighborly{% endblock %}
+{% block title %}About NearNest{% endblock %}
 {% block content %}
 <div class="page-header">
   <div class="container">
-    <h1>About Neighborly</h1>
+    <h1>About NearNest</h1>
     <p>Local Services, Stronger Communities</p>
   </div>
 </div>
@@ -12,15 +12,15 @@
   <div class="container">
     <div class="row g-5 align-items-center">
       <div class="col-lg-6">
-        <h2 class="section-title">What Is Neighborly?</h2>
+        <h2 class="section-title">What Is NearNest?</h2>
         <p class="text-muted mt-2" style="font-size:0.97rem;line-height:1.75;">
-          Neighborly is a community-focused platform that connects people who need everyday home and local services with skilled individuals who live in the same city or neighbourhood.
+          NearNest is a community-focused platform that connects people who need everyday home and local services with skilled individuals who live in the same city or neighbourhood.
         </p>
         <p class="text-muted" style="font-size:0.97rem;line-height:1.75;">
-          Finding a reliable local plumber, cleaner, or tutor is harder than it should be. People often rely on word-of-mouth referrals — information that isn't always accessible or organised. Neighborly brings that trust and local knowledge into a structured, searchable platform that anyone can use.
+          Finding a reliable local plumber, cleaner, or tutor is harder than it should be. People often rely on word-of-mouth referrals — information that isn't always accessible or organised. NearNest brings that trust and local knowledge into a structured, searchable platform that anyone can use.
         </p>
         <p class="text-muted" style="font-size:0.97rem;line-height:1.75;">
-          This project was designed and built as a BTech Computer Science final-year application, with the aim of creating a genuinely functional, well-designed service marketplace using Django. Every feature on this platform — from search and filtering to service requests and review workflows — is implemented with a real database and server-side logic.
+          We believe that getting quality home assistance should be simple, transparent, and dependable. By empowering local independent professionals and connecting them directly with residents, NearNest fosters stronger local economies and reliable neighborhood services.
         </p>
       </div>
       <div class="col-lg-6">
@@ -38,7 +38,7 @@
 <section class="py-5" style="background:var(--color-surface);">
   <div class="container">
     <div class="text-center mb-5">
-      <h2 class="section-title">What Neighborly Offers</h2>
+      <h2 class="section-title">What NearNest Offers</h2>
     </div>
     <div class="row g-4">
       {% for feature in features %}
@@ -80,9 +80,9 @@
   <div class="container">
     <div class="row justify-content-center">
       <div class="col-lg-8 text-center">
-        <h2 class="section-title">A Student Project, Built With Care</h2>
+        <h2 class="section-title">Built on Trust, Quality, and Community</h2>
         <p class="text-muted mt-3" style="font-size:0.95rem;line-height:1.8;max-width:600px;margin:1rem auto;">
-          Neighborly was built as a final-year BTech CS project to demonstrate a complete, real-world web application using Django. It follows Django best practices, uses a proper relational database, implements role-based access control, and provides a thoughtfully designed user interface — without the need for a team or extensive resources.
+          NearNest is committed to connecting homeowners with verified local service professionals. With transparent pricing, verified customer reviews, and direct communication, we make hiring local experts safe, fast, and stress-free.
         </p>
         <div class="d-flex gap-3 justify-content-center mt-4 flex-wrap">
           <a href="{% url 'services:service_list' %}" class="btn btn-primary">Browse Services</a>
