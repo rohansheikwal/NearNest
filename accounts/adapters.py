@@ -50,6 +50,9 @@ class SecureSocialAccountAdapter(DefaultSocialAccountAdapter):
         user = users.first()
         if user:
             sociallogin.connect(request, user)
+            target_portal = 'provider' if (hasattr(user, 'profile') and user.profile.is_provider) else 'customer'
+            if hasattr(request, 'switch_portal'):
+                request.switch_portal(target_portal)
 
     def on_authentication_error(self, request, provider, error=None, exception=None, extra_context=None):
         import logging
@@ -64,7 +67,7 @@ class SecureSocialAccountAdapter(DefaultSocialAccountAdapter):
         user = request.user
         if hasattr(user, 'profile') and user.profile.is_provider:
             return '/services/provider/dashboard/?portal=provider'
-        return '/'
+        return '/accounts/dashboard/'
 
     def save_user(self, request, sociallogin, form=None):
         user = super().save_user(request, sociallogin, form)
@@ -77,4 +80,7 @@ class SecureSocialAccountAdapter(DefaultSocialAccountAdapter):
             if request and ('/register/provider/' in getattr(request, 'path', '') or getattr(request, 'GET', {}).get('portal') == 'provider'):
                 user.profile.role = 'provider'
             user.profile.save()
+        target_portal = 'provider' if (hasattr(user, 'profile') and user.profile.is_provider) else 'customer'
+        if hasattr(request, 'switch_portal'):
+            request.switch_portal(target_portal)
         return user

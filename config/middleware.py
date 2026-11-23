@@ -135,7 +135,27 @@ class PortalSessionMiddleware(SessionMiddleware):
             request.using_legacy_session_cookie = bool(session_key)
         else:
             request.using_legacy_session_cookie = False
-        request.session = self.SessionStore(session_key)
+
+        session = self.SessionStore(session_key)
+
+        # Smart preservation: If the chosen portal session cookie is empty or has no logged-in user,
+        # but the alternate portal cookie has an authenticated user session, load that session!
+        # Do not override on auth pages (login/register) or when portal was explicitly requested in URL/POST.
+        is_auth_page = request.path.startswith(('/accounts/login/', '/accounts/register/'))
+        has_explicit_portal = bool(request.GET.get('portal') or request.POST.get('portal'))
+
+        if not is_auth_page and not has_explicit_portal and not session.get('_auth_user_id'):
+            alt_portal = 'provider' if request.portal == 'customer' else 'customer'
+            alt_cookie = settings.PORTAL_SESSION_COOKIE_NAMES[alt_portal]
+            alt_key = request.COOKIES.get(alt_cookie)
+            if alt_key:
+                alt_session = self.SessionStore(alt_key)
+                if alt_session.get('_auth_user_id'):
+                    request.portal = alt_portal
+                    request.portal_cookie_name = alt_cookie
+                    session = alt_session
+
+        request.session = session
 
     def process_response(self, request, response):
         try:

@@ -96,11 +96,17 @@ def user_login(request):
             ):
                 if target_portal == 'customer':
                     parsed = urlsplit(next_url)
+                    if parsed.path.startswith('/services/provider/'):
+                        return redirect('accounts:customer_dashboard')
                     qs = parse_qs(parsed.query)
                     if 'portal' in qs:
                         del qs['portal']
                         new_query = urlencode(qs, doseq=True)
                         next_url = urlunsplit((parsed.scheme, parsed.netloc, parsed.path, new_query, parsed.fragment))
+                elif target_portal == 'provider':
+                    parsed = urlsplit(next_url)
+                    if parsed.path.startswith('/accounts/dashboard/'):
+                        return redirect('services:provider_dashboard')
                 return redirect(next_url)
             if target_portal == 'provider':
                 return redirect('services:provider_dashboard')
@@ -161,7 +167,9 @@ def change_password(request):
 
 @login_required
 def customer_dashboard(request):
-    if not request.user.profile.is_customer:
+    if not hasattr(request.user, 'profile') or not request.user.profile.is_customer:
+        if hasattr(request.user, 'profile') and request.user.profile.is_provider:
+            return redirect('services:provider_dashboard')
         messages.error(request, "Access denied.")
         return redirect('core:home')
     requests_qs = ServiceRequest.objects.filter(customer=request.user).select_related(
