@@ -13,68 +13,85 @@ class PortalSessionMiddleware(SessionMiddleware):
     """Keep customer and provider/admin authentication in separate sessions."""
 
     def _portal_for_request(self, request):
-        # 1. Host / Subdomain check (e.g. provider.localhost, customer.localhost)
+        path = request.path
+
+        # 1. Path prefixes for strictly role-specific routes (Absolute priority)
+        # Dedicated provider paths can NEVER be customer portal
+        if path.startswith(('/services/provider/', '/admin/', '/accounts/register/provider/')):
+            return 'provider'
+
+        # Dedicated customer paths can NEVER be provider portal
+        if path.startswith(('/accounts/register/customer/', '/accounts/dashboard/')):
+            return 'customer'
+
+        if path.startswith('/bookings/'):
+            # /bookings/request/<pk>/detail/ is shared between customer and provider
+            if '/detail/' in path:
+                if request.GET.get('portal') == 'provider':
+                    return 'provider'
+                if 'nearnest_provider_sessionid' in request.COOKIES and 'nearnest_customer_sessionid' not in request.COOKIES:
+                    return 'provider'
+                return 'customer'
+            # All other /bookings/ routes (including requesting a service, my requests, saved) are customer-only
+            return 'customer'
+
+        # 2. Host / Subdomain check (e.g. provider.localhost, customer.localhost)
         host = request.get_host().split(':')[0].lower()
         if host.startswith('provider.'):
             return 'provider'
         if host.startswith('customer.'):
             return 'customer'
 
-        # 2. Custom header from frontend (per-tab sessionStorage or AJAX)
+        # 3. Custom header from frontend (per-tab sessionStorage or AJAX)
         header_portal = request.headers.get('X-NearNest-Portal') or request.META.get('HTTP_X_NEARNST_PORTAL')
         if header_portal in settings.PORTAL_SESSION_COOKIE_NAMES:
             return header_portal
 
-        # 3. Explicit query parameter or POST parameter
+        # 4. Explicit query parameter or POST parameter
         portal = request.GET.get('portal') or request.POST.get('portal')
         if portal in settings.PORTAL_SESSION_COOKIE_NAMES:
             return portal
 
-        # 4. Check 'next' parameter if present
+        # 5. Check 'next' parameter if present
         next_url = request.GET.get('next') or request.POST.get('next')
         if next_url:
-            portal = parse_qs(urlsplit(next_url).query).get('portal', [None])[0]
-            if portal in settings.PORTAL_SESSION_COOKIE_NAMES:
-                return portal
-            if urlsplit(next_url).path.startswith(('/services/provider/', '/admin/', '/accounts/register/provider/')):
+            next_path = urlsplit(next_url).path
+            if next_path.startswith(('/services/provider/', '/admin/', '/accounts/register/provider/')):
                 return 'provider'
-            if urlsplit(next_url).path.startswith(('/accounts/register/customer/', '/accounts/dashboard/', '/bookings/')):
+            if next_path.startswith(('/accounts/register/customer/', '/accounts/dashboard/', '/bookings/')):
                 return 'customer'
+            next_portal = parse_qs(urlsplit(next_url).query).get('portal', [None])[0]
+            if next_portal in settings.PORTAL_SESSION_COOKIE_NAMES:
+                return next_portal
 
-        # 5. Path prefixes for role-specific routes
-        if request.path.startswith(('/services/provider/', '/admin/', '/accounts/register/provider/')):
-            return 'provider'
-        if request.path.startswith(('/accounts/register/customer/', '/accounts/dashboard/')):
-            return 'customer'
-        if request.path.startswith('/accounts/password-reset/'):
-            if 'nearnest_provider_sessionid' in request.COOKIES and 'nearnest_customer_sessionid' not in request.COOKIES:
-                return 'provider'
-            return 'customer'
-        if request.path.startswith('/bookings/'):
-            # Customer-only paths
-            if request.path.startswith(('/bookings/my-requests/', '/bookings/saved/')):
-                return 'customer'
-            # /bookings/request/<pk>/detail/ is shared between customer and provider
+        # 6. Password reset routes
+        if path.startswith('/accounts/password-reset/'):
             if 'nearnest_provider_sessionid' in request.COOKIES and 'nearnest_customer_sessionid' not in request.COOKIES:
                 return 'provider'
             return 'customer'
 
-        # 6. Referer check (for internal link clicks from within a portal)
+        # 7. Referer check (for internal link clicks from within a portal)
+        # NOTE: Ignore referers from /accounts/ (e.g. login/logout redirects) to avoid leaking stale portal state!
         referer = request.META.get('HTTP_REFERER')
         if referer:
             ref_parsed = urlsplit(referer)
-            ref_host = ref_parsed.netloc.split(':')[0].lower()
-            if ref_host.startswith('provider.'):
-                return 'provider'
-            if ref_host.startswith('customer.'):
-                return 'customer'
-            ref_portal = parse_qs(ref_parsed.query).get('portal', [None])[0]
-            if ref_portal in settings.PORTAL_SESSION_COOKIE_NAMES:
-                return ref_portal
-            if ref_parsed.path.startswith(('/services/provider/', '/admin/', '/accounts/register/provider/')):
-                return 'provider'
-            if ref_parsed.path.startswith(('/accounts/register/customer/', '/accounts/dashboard/', '/bookings/')):
-                return 'customer'
+            if not ref_parsed.path.startswith('/accounts/'):
+                ref_host = ref_parsed.netloc.split(':')[0].lower()
+                if ref_host.startswith('provider.'):
+                    return 'provider'
+                if ref_host.startswith('customer.'):
+                    return 'customer'
+                if ref_parsed.path.startswith(('/services/provider/', '/admin/')):
+                    return 'provider'
+                if ref_parsed.path.startswith(('/bookings/',)):
+                    return 'customer'
+                ref_portal = parse_qs(ref_parsed.query).get('portal', [None])[0]
+                if ref_portal in settings.PORTAL_SESSION_COOKIE_NAMES:
+                    return ref_portal
+
+        # 8. Smart cookie fallback for public/shared routes
+        if 'nearnest_provider_sessionid' in request.COOKIES and 'nearnest_customer_sessionid' not in request.COOKIES:
+            return 'provider'
 
         return 'customer'
 

@@ -24,10 +24,18 @@
   <script>
     (function() {
       try {
-        var serverPortal = "{{ request.portal|default:'' }}";
-        if (serverPortal) {
-          sessionStorage.setItem('nearnest_portal', serverPortal);
-        }
+        {% if user.is_authenticated %}
+          {% if user.profile.is_provider %}
+            sessionStorage.setItem('nearnest_portal', 'provider');
+          {% else %}
+            sessionStorage.setItem('nearnest_portal', 'customer');
+          {% endif %}
+        {% else %}
+          var serverPortal = "{{ request.portal|default:'' }}";
+          if (serverPortal) {
+            sessionStorage.setItem('nearnest_portal', serverPortal);
+          }
+        {% endif %}
       } catch (e) {}
     })();
   </script>
@@ -38,7 +46,7 @@
   <!-- =================== NAVBAR =================== -->
   <nav class="navbar navbar-expand-lg" role="navigation" aria-label="Main navigation">
     <div class="container">
-      <a class="navbar-brand" href="{% url 'core:home' %}{% if request.portal == 'provider' %}?portal=provider{% endif %}" aria-label="NearNest Home">
+      <a class="navbar-brand" href="{% url 'core:home' %}{% if user.is_authenticated and user.profile.is_provider %}?portal=provider{% endif %}" aria-label="NearNest Home">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
           <polyline points="9 22 9 12 15 12 15 22"/>
@@ -60,19 +68,19 @@
         <ul class="navbar-nav navbar-main-links me-auto mb-2 mb-lg-0">
           <li class="nav-item">
             <a class="nav-link {% if request.resolver_match.app_name == 'core' and request.resolver_match.url_name == 'home' %}active{% endif %}"
-               href="{% url 'core:home' %}{% if request.portal == 'provider' %}?portal=provider{% endif %}">Home</a>
+               href="{% url 'core:home' %}{% if user.is_authenticated and user.profile.is_provider %}?portal=provider{% endif %}">Home</a>
           </li>
           <li class="nav-item">
             <a class="nav-link {% if request.resolver_match.app_name == 'services' and request.resolver_match.url_name == 'service_list' %}active{% endif %}"
-               href="{% url 'services:service_list' %}{% if request.portal == 'provider' %}?portal=provider{% endif %}">Explore Services</a>
+               href="{% url 'services:service_list' %}{% if user.is_authenticated and user.profile.is_provider %}?portal=provider{% endif %}">Explore Services</a>
           </li>
           <li class="nav-item">
             <a class="nav-link {% if request.resolver_match.url_name == 'how_it_works' %}active{% endif %}"
-               href="{% url 'core:how_it_works' %}{% if request.portal == 'provider' %}?portal=provider{% endif %}">How It Works</a>
+               href="{% url 'core:how_it_works' %}{% if user.is_authenticated and user.profile.is_provider %}?portal=provider{% endif %}">How It Works</a>
           </li>
           <li class="nav-item">
             <a class="nav-link {% if request.resolver_match.url_name == 'about' %}active{% endif %}"
-               href="{% url 'core:about' %}{% if request.portal == 'provider' %}?portal=provider{% endif %}">About</a>
+               href="{% url 'core:about' %}{% if user.is_authenticated and user.profile.is_provider %}?portal=provider{% endif %}">About</a>
           </li>
         </ul>
 
@@ -120,7 +128,7 @@
                 <li><hr class="dropdown-divider"></li>
                 <li>
                   <a class="dropdown-item" href="{% url 'accounts:logout' %}?portal={{ request.portal }}"
-                     onclick="return confirm('Log out of NearNest?')">Logout</a>
+                     onclick="sessionStorage.removeItem('nearnest_portal'); return confirm('Log out of NearNest?');">Logout</a>
                 </li>
               </ul>
             </li>
@@ -129,7 +137,7 @@
               <a class="nav-link" href="{% url 'core:become_provider' %}">Become a Provider</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{% url 'accounts:login' %}{% if request.portal == 'provider' %}?portal=provider{% else %}?portal=customer{% endif %}">Login</a>
+              <a class="nav-link" href="{% url 'accounts:login' %}">Login</a>
             </li>
             <li class="nav-item">
               <a class="btn btn-primary btn-sm ms-1" href="{% url 'accounts:register_customer' %}">Create Account</a>

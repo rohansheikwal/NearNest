@@ -2,7 +2,7 @@ import logging
 import secrets
 from datetime import timedelta
 from importlib import import_module
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit, urlunsplit, parse_qs
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.conf import settings
@@ -94,6 +94,13 @@ def user_login(request):
                 allowed_hosts={request.get_host()},
                 require_https=request.is_secure(),
             ):
+                if target_portal == 'customer':
+                    parsed = urlsplit(next_url)
+                    qs = parse_qs(parsed.query)
+                    if 'portal' in qs:
+                        del qs['portal']
+                        new_query = urlencode(qs, doseq=True)
+                        next_url = urlunsplit((parsed.scheme, parsed.netloc, parsed.path, new_query, parsed.fragment))
                 return redirect(next_url)
             if target_portal == 'provider':
                 return redirect('services:provider_dashboard')

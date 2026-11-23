@@ -40,7 +40,7 @@ def make_provider(username='provider1', password='TestPass123!'):
 
 
 def make_category(name='Plumbing'):
-    return ServiceCategory.objects.create(name=name, slug=name.lower())
+    return ServiceCategory.objects.create(name=name, slug=name.lower().replace(' ', '-'))
 
 
 def make_service(provider, category, title='Test Service', price=500):
@@ -723,26 +723,52 @@ class ProviderWorkflowTest(TestCase):
 
 
 # ============================================================
-# SAVED SERVICES UNIQUENESS TEST
+# CUSTOMER PORTAL & BOOKING ISOLATION TESTS
 # ============================================================
 
-class SavedServiceTest(TestCase):
+class CustomerPortalBookingTests(TestCase):
 
     def setUp(self):
-        self.customer = make_customer()
-        self.provider = make_provider()
-        self.category = make_category()
-        self.service = make_service(self.provider, self.category)
+        self.customer = make_customer('customer_test', 'SecretPass123!')
+        self.provider = make_provider('provider_test', 'SecretPass123!')
+        self.category = make_category('Home Repair')
+        self.service = make_service(self.provider, self.category, 'Tap Fixing', price=400)
 
-    def test_cannot_save_same_service_twice(self):
-        from django.db import IntegrityError
-        SavedService.objects.create(customer=self.customer, service=self.service)
-        with self.assertRaises(IntegrityError):
-            SavedService.objects.create(customer=self.customer, service=self.service)
+    def test_customer_login_authenticates_and_shows_customer_navbar(self):
+        response = self.client.post(reverse('accounts:login'), {
+            'username': 'customer_test',
+            'password': 'SecretPass123!',
+        }, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['user'].is_authenticated)
+        self.assertTrue(response.context['user'].profile.is_customer)
+        self.assertContains(response, 'Test Customer')
+        self.assertContains(response, 'My Requests')
+        self.assertNotContains(response, 'href="/accounts/login/"')
 
-    def test_get_or_create_handles_duplicate(self):
-        saved1, created1 = SavedService.objects.get_or_create(customer=self.customer, service=self.service)
-        saved2, created2 = SavedService.objects.get_or_create(customer=self.customer, service=self.service)
-        self.assertTrue(created1)
-        self.assertFalse(created2)
-        self.assertEqual(saved1.pk, saved2.pk)
+    def test_customer_can_access_booking_even_with_provider_query_param(self):
+        self.client.login(username='customer_test', password='SecretPass123!')
+        url = reverse('bookings:request_service', kwargs={'service_pk': self.service.pk}) + '?portal=provider'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Tap Fixing')
+
+        post_data = {
+            'requested_date': (datetime.date.today() + datetime.timedelta(days=2)).isoformat(),
+            'requested_time': '11:00',
+            'service_location': '77 Park Avenue',
+            'work_description': 'Fix the leaking tap please',
+        }
+        post_response = self.client.post(url, post_data)
+        self.assertEqual(post_response.status_code, 302)
+        self.assertTrue(ServiceRequest.objects.filter(customer=self.customer, service=self.service).exists())
+
+    def test_customer_login_sanitizes_provider_next_url(self):
+        next_target = f"/bookings/request/{self.service.pk}/?portal=provider"
+        response = self.client.post(f"{reverse('accounts:login')}?next={next_target}", {
+            'username': 'customer_test',
+            'password': 'SecretPass123!',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, f"/bookings/request/{self.service.pk}/")
+

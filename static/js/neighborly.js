@@ -44,44 +44,23 @@ document.addEventListener('DOMContentLoaded', function() {
       const isCustomerPath = window.location.pathname.startsWith('/accounts/dashboard/') ||
                              window.location.pathname.startsWith('/bookings/');
 
-      let portal = urlPortal || (isProviderPath ? 'provider' : (isCustomerPath ? 'customer' : bodyPortal));
+      let portal;
+      if (isProviderPath) {
+        portal = 'provider';
+      } else if (isCustomerPath) {
+        portal = 'customer';
+      } else {
+        portal = urlPortal || bodyPortal || sessionStorage.getItem('nearnest_portal') || 'customer';
+      }
+
       if (portal) {
         sessionStorage.setItem('nearnest_portal', portal);
-      } else {
-        portal = sessionStorage.getItem('nearnest_portal') || 'customer';
       }
       return portal;
     } catch (e) {
       return 'customer';
     }
   })();
-
-  // Synchronize internal links and forms with active tab's portal
-  if (activePortal === 'provider') {
-    document.querySelectorAll('a[href]').forEach(link => {
-      const href = link.getAttribute('href');
-      if (href && !href.startsWith('#') && !href.startsWith('javascript:') && !href.startsWith('mailto:')) {
-        try {
-          const url = new URL(href, window.location.origin);
-          if (url.origin === window.location.origin && !url.searchParams.has('portal') &&
-              !url.pathname.startsWith('/accounts/logout/')) {
-            url.searchParams.set('portal', 'provider');
-            link.setAttribute('href', url.pathname + url.search + url.hash);
-          }
-        } catch (err) {}
-      }
-    });
-
-    document.querySelectorAll('form').forEach(form => {
-      if (!form.querySelector('input[name="portal"]')) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'portal';
-        input.value = 'provider';
-        form.appendChild(input);
-      }
-    });
-  }
 
   // --- Alert auto-dismiss ---
   const alerts = document.querySelectorAll('.auto-dismiss');
