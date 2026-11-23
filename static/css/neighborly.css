@@ -226,6 +226,30 @@ img { max-width: 100%; height: auto; display: block; }
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(35,76,58,0.25);
 }
+.btn-primary:focus,
+.btn-primary:active {
+  background: var(--color-primary-dark, #1B3B2B) !important;
+  border-color: var(--color-primary-dark, #1B3B2B) !important;
+  color: #fff !important;
+}
+.btn-primary:disabled,
+.btn-primary.disabled,
+fieldset:disabled .btn-primary {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: #fff !important;
+  opacity: 0.85 !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+}
+
+/* Hide Microsoft Edge / Chromium native password reveal button to prevent duplicate eye icons */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
 
 .btn-outline-primary {
   background: transparent;
@@ -1197,3 +1221,200 @@ img { max-width: 100%; height: auto; display: block; }
 .divider { height: 1px; background: var(--color-border); margin: 1.5rem 0; }
 .gap-sm { gap: 0.5rem !important; }
 .rounded-pill { border-radius: 50px !important; }
+
+/* ==========================================================================
+   INTERACTIVE PASSWORD RESET & AUTH ENHANCEMENTS
+   ========================================================================== */
+
+/* Multi-Step Stepper */
+.auth-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+  padding: 0.25rem 0;
+}
+.auth-step {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.auth-step-circle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1.5px solid #cbd5e1;
+  transition: all 0.25s ease;
+}
+.auth-step.active {
+  color: var(--color-primary);
+}
+.auth-step.active .auth-step-circle {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(35, 76, 58, 0.15);
+}
+.auth-step.completed {
+  color: #059669;
+}
+.auth-step.completed .auth-step-circle {
+  background: #10b981;
+  color: #fff;
+  border-color: #10b981;
+}
+.auth-step-line {
+  flex: 1;
+  max-width: 36px;
+  height: 2px;
+  background: #e2e8f0;
+  margin: 0 0.5rem;
+  border-radius: 2px;
+}
+.auth-step-line.completed {
+  background: #10b981;
+}
+
+/* Seamless Password Input with Embedded Eye Toggle */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.password-input-wrapper .form-control {
+  padding-right: 48px !important;
+  width: 100%;
+}
+.password-toggle-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #64748b;
+  padding: 6px 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  z-index: 5;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.password-toggle-btn:hover {
+  color: var(--color-primary);
+  background: rgba(35, 76, 58, 0.08) !important;
+}
+.password-toggle-btn:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* 6-Box OTP Input Grid */
+.otp-digit-inputs {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 1.25rem 0 0.5rem;
+}
+.otp-digit-box {
+  width: 48px;
+  height: 56px;
+  font-size: 1.7rem;
+  font-weight: 700;
+  text-align: center;
+  border: 1.5px solid #d1d5db;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--color-text);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-appearance: none;
+}
+.otp-digit-box:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(35, 76, 58, 0.15);
+  outline: none;
+  transform: translateY(-2px);
+}
+.otp-digit-box.filled {
+  border-color: var(--color-primary);
+  background: #fbfdfc;
+}
+
+/* Password Strength Meter & Interactive Checklist */
+.strength-track {
+  display: flex;
+  gap: 5px;
+  height: 4px;
+  margin: 0.6rem 0 0.4rem;
+}
+.strength-bar {
+  flex: 1;
+  height: 100%;
+  border-radius: 2px;
+  background: #e2e8f0;
+  transition: background-color 0.25s ease;
+}
+.strength-bar.weak { background: #ef4444; }
+.strength-bar.fair { background: #f59e0b; }
+.strength-bar.good { background: #10b981; }
+.strength-bar.strong { background: #059669; }
+
+.strength-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.password-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  font-size: 0.81rem;
+}
+.password-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  margin-bottom: 4px;
+  transition: color 0.2s ease;
+}
+.password-checklist li.met {
+  color: #059669;
+  font-weight: 600;
+}
+.password-checklist li .check-icon {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 10px;
+  background: #e2e8f0;
+  color: #64748b;
+  transition: all 0.2s ease;
+}
+.password-checklist li.met .check-icon {
+  background: #10b981;
+  color: #fff;
+}
