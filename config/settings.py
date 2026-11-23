@@ -26,6 +26,8 @@ ALLOWED_HOSTS = [
         'DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,.localhost'
     ).split(',') if host.strip()
 ]
+if DEBUG and 'testserver' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('testserver')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -128,12 +130,14 @@ ACCOUNT_LOGIN_METHODS = {'username', 'email'}
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_ADAPTER = 'accounts.adapters.SecureSocialAccountAdapter'
+
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'APP': {
-            'client_id': os.environ.get('GOOGLE_CLIENT_ID', ''),
-            'secret': os.environ.get('GOOGLE_CLIENT_SECRET', ''),
+            'client_id': os.environ.get('GOOGLE_CLIENT_ID', '').strip() or 'your-google-client-id-here',
+            'secret': os.environ.get('GOOGLE_CLIENT_SECRET', '').strip() or 'your-google-client-secret-here',
         },
         'SCOPE': ['openid', 'email', 'profile'],
         'AUTH_PARAMS': {'access_type': 'online'},
