@@ -35,7 +35,22 @@ class PortalSessionMiddleware(SessionMiddleware):
             # All other /bookings/ routes (including requesting a service, my requests, saved) are customer-only
             return 'customer'
 
-        # 2. Host / Subdomain check (e.g. provider.localhost, customer.localhost)
+        # 2. Social / OAuth routes: Guarantee session consistency between login initiation & callback
+        if path.startswith(('/accounts/google/', '/accounts/social/')):
+            state_id = request.GET.get('state')
+            if state_id:
+                for p_name, cookie_name in settings.PORTAL_SESSION_COOKIE_NAMES.items():
+                    s_key = request.COOKIES.get(cookie_name)
+                    if s_key:
+                        s = self.SessionStore(s_key)
+                        states = s.get('socialaccount_states', {})
+                        if isinstance(states, dict) and state_id in states:
+                            return p_name
+            if request.GET.get('portal') == 'provider':
+                return 'provider'
+            return 'customer'
+
+        # 3. Host / Subdomain check (e.g. provider.localhost, customer.localhost)
         host = request.get_host().split(':')[0].lower()
         if host.startswith('provider.'):
             return 'provider'

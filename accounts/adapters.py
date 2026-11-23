@@ -51,6 +51,21 @@ class SecureSocialAccountAdapter(DefaultSocialAccountAdapter):
         if user:
             sociallogin.connect(request, user)
 
+    def on_authentication_error(self, request, provider, error=None, exception=None, extra_context=None):
+        import logging
+        from django.contrib import messages
+        from django.shortcuts import redirect
+        logger = logging.getLogger(__name__)
+        logger.warning("Social auth error: provider=%s, error=%s, exc=%s", provider, error, exception)
+        messages.error(request, "Google sign-in could not be completed or the session expired. Please try signing in again.")
+        raise ImmediateHttpResponse(redirect('accounts:login'))
+
+    def get_login_redirect_url(self, request):
+        user = request.user
+        if hasattr(user, 'profile') and user.profile.is_provider:
+            return '/services/provider/dashboard/?portal=provider'
+        return '/'
+
     def save_user(self, request, sociallogin, form=None):
         user = super().save_user(request, sociallogin, form)
         extra_data = getattr(sociallogin.account, 'extra_data', {}) or {}

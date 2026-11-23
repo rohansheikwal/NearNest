@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign In Error — NearNest{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+  <div class="container">
+    <div class="auth-card text-center" style="max-width:480px;margin:2rem auto;">
+      <div style="width:54px;height:54px;border-radius:50%;background:#fee2e2;color:#dc2626;display:inline-flex;align-items:center;justify-content:center;margin-bottom:1.25rem;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <h1 class="auth-title">Sign In Interrupted</h1>
+      <p class="auth-subtitle mb-4">
+        The third-party authentication session expired or was cancelled. Please try signing in again.
+      </p>
+
+      <a href="{% url 'accounts:login' %}" class="btn btn-primary w-100 d-flex align-items-center justify-content-center text-center">
+        Return to Login
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
