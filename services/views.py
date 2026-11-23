@@ -246,16 +246,52 @@ def service_delete(request, pk):
 def provider_requests(request):
     from bookings.models import ServiceRequest
     my_service_ids = Service.objects.filter(provider=request.user).values_list('id', flat=True)
-    status_filter = request.GET.get('status', '')
-    all_requests = ServiceRequest.objects.filter(service__in=my_service_ids).select_related(
+    base_requests = ServiceRequest.objects.filter(service__in=my_service_ids).select_related(
         'customer__profile', 'service'
     ).order_by('-created_at')
-    if status_filter:
-        all_requests = all_requests.filter(status=status_filter)
+
+    total_count = base_requests.count()
+
+    # Pre-calculate counts for all statuses
+    status_counts = {
+        'pending': base_requests.filter(status=ServiceRequest.STATUS_PENDING).count(),
+        'accepted': base_requests.filter(status=ServiceRequest.STATUS_ACCEPTED).count(),
+        'inprogress': base_requests.filter(status=ServiceRequest.STATUS_INPROGRESS).count(),
+        'completed': base_requests.filter(status=ServiceRequest.STATUS_COMPLETED).count(),
+        'rejected': base_requests.filter(status=ServiceRequest.STATUS_REJECTED).count(),
+        'cancelled': base_requests.filter(status=ServiceRequest.STATUS_CANCELLED).count(),
+    }
+
+    status_filter = request.GET.get('status', '').strip().lower()
+    if status_filter and status_filter in status_counts:
+        filtered_requests = base_requests.filter(status=status_filter)
+    else:
+        status_filter = ''
+        filtered_requests = base_requests
+
+    # Build structured tabs with accurate counts
+    tabs = [
+        {
+            'val': '',
+            'label': 'All',
+            'count': total_count,
+            'is_active': not status_filter,
+        }
+    ]
+    for val, label in ServiceRequest.STATUS_CHOICES:
+        tabs.append({
+            'val': val,
+            'label': label,
+            'count': status_counts.get(val, 0),
+            'is_active': status_filter == val,
+        })
+
     context = {
-        'all_requests': all_requests,
+        'all_requests': filtered_requests,
+        'total_count': total_count,
         'status_filter': status_filter,
-        'status_choices': ServiceRequest.STATUS_CHOICES,
+        'status_counts': status_counts,
+        'tabs': tabs,
     }
     return render(request, 'services/provider_requests.html', context)
 

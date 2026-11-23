@@ -1,87 +1,118 @@
 {% extends 'base.html' %}
-{% block title %}Provider Requests — Neighborly{% endblock %}
+{% block title %}Customer Requests — NearNest{% endblock %}
 {% block content %}
 <div class="page-header">
   <div class="container">
     <h1>Customer Requests</h1>
-    <p>Review and manage all incoming service requests.</p>
+    <p>Review and manage all incoming service requests from customers.</p>
   </div>
 </div>
+
 <div class="container py-5">
-  <!-- Status filter tabs -->
-  <div class="d-flex gap-2 flex-wrap mb-4">
-    <a href="{% url 'services:provider_requests' %}" class="btn {% if not status_filter %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">All ({{ all_requests.count }})</a>
-    {% for val, label in status_choices %}
-    <a href="?status={{ val }}" class="btn {% if status_filter == val %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">{{ label }}</a>
+  <!-- Status filter tabs with live counts -->
+  <div class="d-flex gap-2 flex-wrap mb-4" role="tablist" aria-label="Filter requests by status">
+    {% for tab in tabs %}
+    <a href="{% if tab.val %}?portal=provider&status={{ tab.val }}{% else %}{% url 'services:provider_requests' %}?portal=provider{% endif %}"
+       class="btn {% if tab.is_active %}btn-primary{% else %}btn-secondary{% endif %} btn-sm d-inline-flex align-items-center gap-2"
+       style="border-radius:20px;padding:0.4rem 0.9rem;font-weight:600;">
+      <span>{{ tab.label }}</span>
+      <span class="badge {% if tab.is_active %}bg-white text-dark{% else %}bg-dark bg-opacity-25 text-white{% endif %}"
+            style="border-radius:10px;font-size:0.75rem;padding:0.25em 0.55em;">
+        {{ tab.count }}
+      </span>
+    </a>
     {% endfor %}
   </div>
 
   {% if all_requests %}
   <div class="d-flex flex-column gap-3">
     {% for req in all_requests %}
-    <div class="request-card">
+    <div class="request-card p-4" style="background:#fff;border-radius:var(--radius-md);border:1px solid var(--color-border);box-shadow:var(--shadow-sm);">
       <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
-        <div>
+        <div style="flex:1;min-width:280px;">
           <div class="d-flex align-items-center gap-2 mb-2">
-            <span class="badge {{ req.get_status_badge_class }}">{{ req.get_status_display }}</span>
-            <span style="font-size:0.78rem;color:var(--color-text-light);">#{{ req.pk }} · {{ req.created_at|date:"d M Y" }}</span>
+            <span class="badge {{ req.get_status_badge_class }}" style="font-size:0.8rem;padding:0.4em 0.8em;text-transform:uppercase;">
+              {{ req.get_status_display }}
+            </span>
+            <span style="font-size:0.8rem;color:var(--color-text-light);font-weight:600;">
+              #{{ req.pk }} · {{ req.created_at|date:"d M Y" }}
+            </span>
           </div>
-          <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.2rem;">
-            <a href="{% url 'bookings:request_detail' req.pk %}" class="text-decoration-none" style="color:var(--color-text);">
+
+          <h3 style="font-size:1.15rem;font-weight:700;margin-bottom:0.35rem;">
+            <a href="{% url 'bookings:request_detail' req.pk %}?portal=provider" class="text-decoration-none" style="color:var(--color-text);">
               {{ req.service.title }}
             </a>
           </h3>
-          <div style="font-size:0.85rem;color:var(--color-text-muted);margin-bottom:0.5rem;">
+
+          <div style="font-size:0.88rem;color:var(--color-text-muted);margin-bottom:0.6rem;">
             Customer: <strong>{{ req.customer.profile.get_display_name }}</strong>
-            · Requested for: {{ req.requested_date|date:"d M Y" }}
+            · Requested for: <strong>{{ req.requested_date|date:"d M Y" }}</strong>
             {% if req.requested_time %} at {{ req.requested_time }}{% endif %}
           </div>
+
           {% if req.work_description %}
-          <p style="font-size:0.87rem;color:var(--color-text-muted);margin-bottom:0.5rem;">{{ req.work_description|truncatechars:150 }}</p>
+          <p style="font-size:0.9rem;color:var(--color-text);margin-bottom:0.6rem;background:#F9FAFB;padding:0.65rem 0.85rem;border-radius:8px;border-left:3px solid var(--color-primary);">
+            {{ req.work_description }}
+          </p>
           {% endif %}
-          {% if req.service_location %}
-          <div style="font-size:0.82rem;color:var(--color-text-light);">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            {{ req.service_location }}
+
+          <div class="d-flex align-items-center gap-3 flex-wrap mt-2">
+            {% if req.service_location %}
+            <div style="font-size:0.83rem;color:var(--color-text-muted);" class="d-flex align-items-center gap-1">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span>{{ req.service_location }}</span>
+            </div>
+            {% endif %}
+
+            <a href="{% url 'services:service_detail' req.service.pk %}?portal=provider"
+               style="font-size:0.82rem;color:var(--color-primary);text-decoration:none;font-weight:600;">
+              Service Page ↗
+            </a>
           </div>
-          {% endif %}
         </div>
-        <div class="d-flex flex-column gap-2 align-items-end">
+
+        <!-- Action Buttons -->
+        <div class="d-flex flex-column gap-2 align-items-end" style="min-width:200px;">
           {% if req.status == 'pending' %}
           <form method="POST" action="{% url 'services:update_request_status' req.pk %}">
             {% csrf_token %}
-            <input type="hidden" name="next" value="{% url 'services:provider_requests' %}">
+            <input type="hidden" name="next" value="{% url 'services:provider_requests' %}?portal=provider{% if status_filter %}&status={{ status_filter }}{% endif %}">
             <input type="text" name="provider_response" class="form-control form-control-sm mb-2"
-                   placeholder="Optional response to customer">
+                   placeholder="Optional note to customer">
             <div class="d-flex gap-2">
-              <button type="submit" name="status" value="accepted" class="btn btn-primary btn-sm">Accept</button>
-              <button type="submit" name="status" value="rejected" class="btn btn-danger btn-sm"
+              <button type="submit" name="status" value="accepted" class="btn btn-primary btn-sm px-3">Accept</button>
+              <button type="submit" name="status" value="rejected" class="btn btn-danger btn-sm px-3"
                       onclick="return confirm('Reject this request?')">Reject</button>
             </div>
           </form>
           {% elif req.status == 'accepted' %}
           <form method="POST" action="{% url 'services:update_request_status' req.pk %}">
             {% csrf_token %}
-            <input type="hidden" name="next" value="{% url 'services:provider_requests' %}">
+            <input type="hidden" name="next" value="{% url 'services:provider_requests' %}?portal=provider{% if status_filter %}&status={{ status_filter }}{% endif %}">
             <input type="text" name="provider_response" class="form-control form-control-sm mb-2"
-                   placeholder="Optional response to customer">
-            <button type="submit" name="status" value="inprogress" class="btn btn-primary btn-sm">Mark In Progress</button>
+                   placeholder="Optional note to customer">
+            <button type="submit" name="status" value="inprogress" class="btn btn-primary btn-sm w-100">Start Working (In Progress)</button>
           </form>
           {% elif req.status == 'inprogress' %}
           <form method="POST" action="{% url 'services:update_request_status' req.pk %}">
             {% csrf_token %}
-            <input type="hidden" name="next" value="{% url 'services:provider_requests' %}">
+            <input type="hidden" name="next" value="{% url 'services:provider_requests' %}?portal=provider{% if status_filter %}&status={{ status_filter }}{% endif %}">
             <input type="text" name="provider_response" class="form-control form-control-sm mb-2"
-                   placeholder="Optional response to customer">
-            <button type="submit" name="status" value="completed" class="btn btn-primary btn-sm"
+                   placeholder="Completion note to customer">
+            <button type="submit" name="status" value="completed" class="btn btn-success btn-sm w-100"
                     onclick="return confirm('Mark this request as completed?')">Mark Completed</button>
           </form>
           {% endif %}
 
+          <a href="{% url 'bookings:request_detail' req.pk %}?portal=provider" class="btn btn-outline-secondary btn-sm mt-1">
+            View Request Details →
+          </a>
+
           {% if req.notes %}
-          <details style="font-size:0.82rem;color:var(--color-text-muted);">
+          <details style="font-size:0.82rem;color:var(--color-text-muted);width:100%;text-align:right;">
             <summary style="cursor:pointer;">Customer notes</summary>
-            <div style="margin-top:0.4rem;padding:0.5rem;background:var(--color-surface);border-radius:var(--radius-sm);">{{ req.notes }}</div>
+            <div style="margin-top:0.4rem;padding:0.5rem;background:#F9FAFB;border-radius:6px;text-align:left;">{{ req.notes }}</div>
           </details>
           {% endif %}
         </div>
@@ -90,15 +121,49 @@
     {% endfor %}
   </div>
   {% else %}
-  <div class="empty-state">
-    <div class="empty-state-icon">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+  <!-- Empty State for Selected Filter -->
+  <div class="empty-state text-center p-5" style="background:#fff;border-radius:var(--radius-lg);border:1px dashed var(--color-border);">
+    <div class="empty-state-icon mb-3" style="width:56px;height:56px;border-radius:50%;background:rgba(35,76,58,0.08);color:var(--color-primary);display:inline-flex;align-items:center;justify-content:center;margin:0 auto;">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
     </div>
-    <h4>No requests{% if status_filter %} with status "{{ status_filter }}"{% endif %}</h4>
-    <p>{% if status_filter %}Try a different filter.{% else %}Customer requests will appear here once customers discover your services.{% endif %}</p>
-    {% if not status_filter %}
-    <a href="{% url 'services:service_create' %}" class="btn btn-primary">Add a Service</a>
-    {% endif %}
+    <h3 style="font-size:1.15rem;font-weight:700;margin-bottom:0.4rem;">
+      {% if status_filter == 'pending' %}
+        No Pending Requests
+      {% elif status_filter == 'accepted' %}
+        No Accepted Requests
+      {% elif status_filter == 'inprogress' %}
+        No In-Progress Requests
+      {% elif status_filter == 'completed' %}
+        No Completed Requests
+      {% elif status_filter == 'rejected' %}
+        No Rejected Requests
+      {% elif status_filter == 'cancelled' %}
+        No Cancelled Requests
+      {% else %}
+        No Customer Requests Yet
+      {% endif %}
+    </h3>
+    <p style="color:var(--color-text-muted);font-size:0.9rem;max-width:460px;margin:0 auto 1.25rem;">
+      {% if status_filter == 'pending' %}
+        You do not have any new pending requests at this moment. When customers request your services, they will appear here so you can accept or decline them.
+      {% elif status_filter %}
+        There are currently no requests with the status "{{ status_filter|title }}".
+      {% else %}
+        Customer requests will appear here once customers discover and book your services.
+      {% endif %}
+    </p>
+
+    <div class="d-flex gap-2 justify-content-center">
+      {% if status_filter %}
+      <a href="{% url 'services:provider_requests' %}?portal=provider" class="btn btn-outline-primary btn-sm">
+        View All Requests ({{ total_count }})
+      </a>
+      {% else %}
+      <a href="{% url 'services:service_create' %}?portal=provider" class="btn btn-primary btn-sm">
+        + Add a New Service
+      </a>
+      {% endif %}
+    </div>
   </div>
   {% endif %}
 </div>
