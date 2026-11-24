@@ -199,6 +199,55 @@ img { max-width: 100%; height: auto; display: block; }
   height: 18px;
 }
 
+/* --- Official Google Sign-In Button --- */
+.google-signin-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  min-height: 44px !important;
+  padding: 0.65rem 1.25rem !important;
+  background-color: #ffffff !important;
+  border: 1px solid #dadce0 !important;
+  border-radius: var(--radius-md, 8px) !important;
+  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.08), 0 1px 3px 1px rgba(60, 64, 67, 0.04) !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.google-signin-btn:hover {
+  background-color: #f8fafd !important;
+  border-color: #c2d7fa !important;
+  box-shadow: 0 1px 3px 0 rgba(60, 64, 67, 0.25), 0 4px 8px 3px rgba(60, 64, 67, 0.12) !important;
+}
+
+.google-signin-btn:active {
+  background-color: #ecf3fe !important;
+  border-color: #a8c7fa !important;
+  box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3) !important;
+}
+
+.google-signin-btn .google-icon {
+  width: 20px !important;
+  height: 20px !important;
+  margin-right: 12px !important;
+  flex-shrink: 0 !important;
+  display: inline-block !important;
+}
+
+.google-signin-btn .google-text {
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif !important;
+  font-size: 0.95rem !important;
+  font-weight: 500 !important;
+  color: #3c4043 !important;
+  letter-spacing: 0.25px !important;
+}
+
+.google-signin-btn:hover .google-text {
+  color: #1f1f1f !important;
+}
+
 /* --- Buttons --- */
 .btn {
   font-family: var(--font-main);
