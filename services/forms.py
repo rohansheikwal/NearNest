@@ -1,13 +1,30 @@
 from django import forms
 from PIL import Image, UnidentifiedImageError
-from .models import Service, ServiceCategory
+from .models import Service, ServiceCategory, DAY_NAMES, parse_full_availability
+
+WEEKDAY_CHOICES = [
+    ('0', 'Monday'),
+    ('1', 'Tuesday'),
+    ('2', 'Wednesday'),
+    ('3', 'Thursday'),
+    ('4', 'Friday'),
+    ('5', 'Saturday'),
+    ('6', 'Sunday'),
+]
 
 
 class ServiceForm(forms.ModelForm):
+    working_days = forms.MultipleChoiceField(
+        choices=WEEKDAY_CHOICES,
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+        required=False,
+        label="Available Working Days"
+    )
+
     class Meta:
         model = Service
         fields = ['category', 'title', 'description', 'image', 'price', 'pricing_unit',
-                  'city', 'area', 'availability', 'is_active']
+                  'city', 'area', 'start_time', 'end_time', 'duration_hours', 'availability', 'is_active']
         widgets = {
             'category': forms.Select(attrs={'class': 'form-select'}),
             'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Professional Home Plumbing'}),
@@ -18,6 +35,9 @@ class ServiceForm(forms.ModelForm):
             'pricing_unit': forms.Select(attrs={'class': 'form-select'}),
             'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Bangalore'}),
             'area': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Koramangala'}),
+            'start_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'end_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'duration_hours': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'max': '24', 'placeholder': '1'}),
             'availability': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Mon–Sat, 9 AM–6 PM'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
@@ -27,6 +47,42 @@ class ServiceForm(forms.ModelForm):
         self.fields['category'].queryset = ServiceCategory.objects.filter(is_active=True)
         self.fields['category'].empty_label = "Select a category"
         self.fields['image'].required = False
+        self.fields['start_time'].required = False
+        self.fields['end_time'].required = False
+        self.fields['duration_hours'].required = False
+        self.fields['availability'].required = False
+
+        if self.instance and self.instance.pk:
+            sched = self.instance.get_availability_schedule()
+            if sched['has_availability']:
+                self.fields['working_days'].initial = [str(d) for d in sched['available_weekday_indices']]
+                if not self.instance.start_time and sched['days']:
+                    first_d = sched['days'][sched['available_weekday_indices'][0]]
+                    self.fields['start_time'].initial = first_d['start_time']
+                    self.fields['end_time'].initial = first_d['end_time']
+        else:
+            self.fields['working_days'].initial = ['0', '1', '2', '3', '4', '5']
+            self.fields['start_time'].initial = '09:00'
+            self.fields['end_time'].initial = '18:00'
+            self.fields['duration_hours'].initial = 1
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        working_days = self.cleaned_data.get('working_days')
+        if working_days:
+            instance.available_days = ','.join(sorted(working_days))
+        elif not instance.available_days and instance.availability:
+            parsed = parse_full_availability(instance.availability)
+            if parsed:
+                instance.available_days = ','.join(str(d) for d in sorted(parsed.keys()))
+
+        if instance.available_days and instance.start_time and instance.end_time:
+            sched = instance.get_availability_schedule()
+            instance.availability = sched['summary']
+
+        if commit:
+            instance.save()
+        return instance
 
     def clean_price(self):
         price = self.cleaned_data.get('price')

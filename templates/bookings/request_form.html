@@ -13,20 +13,43 @@
       <div class="card">
         <div class="card-body p-4">
           <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:1.5rem;">Service Request Details</h2>
-          <form method="POST" novalidate>
+
+          <!-- Provider Availability Summary Banner -->
+          {% if schedule and schedule.has_availability %}
+          <div class="p-3 mb-4 rounded-3" style="background:#f8faf9;border:1px solid var(--color-border);">
+            <div class="d-flex align-items-center gap-2 mb-1" style="font-weight:700;color:var(--color-primary);font-size:0.9rem;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span>{{ service.provider.profile.get_display_name }}'s Working Schedule</span>
+            </div>
+            <div style="font-size:0.85rem;color:var(--color-text);">
+              <strong>Working Days:</strong> <span id="displayWorkingDays">{{ schedule.available_days_display }}</span>
+              <span class="mx-1">&bull;</span>
+              <strong>Hours:</strong> <span id="displayWorkingHours">{{ schedule.start_time_str }} – {{ schedule.end_time_str }}</span>
+              {% if service.duration_hours %}
+              <span class="mx-1">&bull;</span>
+              <strong>Service Duration:</strong> {{ service.duration_hours }} hr{{ service.duration_hours|pluralize }}
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          <form method="POST" id="bookingRequestForm" novalidate>
             {% csrf_token %}
             {% if form.non_field_errors %}
             <div class="alert alert-danger mb-3" role="alert">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>
             {% endif %}
             <div class="row g-3">
               <div class="col-md-6">
-                <label class="form-label" for="{{ form.requested_date.id_for_label }}">Preferred Date *</label>
+                <label class="form-label fw-semibold" for="{{ form.requested_date.id_for_label }}">Preferred Date *</label>
                 {{ form.requested_date }}
+                <div id="dateFeedback" class="form-text mt-1" style="font-size:0.83rem;"></div>
                 {% if form.requested_date.errors %}<div class="invalid-feedback d-block">{{ form.requested_date.errors.0 }}</div>{% endif %}
               </div>
               <div class="col-md-6">
-                <label class="form-label" for="{{ form.requested_time.id_for_label }}">Preferred Time</label>
+                <label class="form-label fw-semibold" for="{{ form.requested_time.id_for_label }}">Preferred Time</label>
                 {{ form.requested_time }}
+                <div id="timeFeedback" class="form-text mt-1" style="font-size:0.83rem;"></div>
+                {% if form.requested_time.errors %}<div class="invalid-feedback d-block">{{ form.requested_time.errors.0 }}</div>{% endif %}
               </div>
               <div class="col-12">
                 <label class="form-label" for="{{ form.service_location.id_for_label }}">Service Location / Address *</label>
@@ -37,6 +60,7 @@
               <div class="col-12">
                 <label class="form-label" for="{{ form.work_description.id_for_label }}">Describe the Work *</label>
                 {{ form.work_description }}
+                <div class="form-text">Describe the work you need — be specific so the provider can help you effectively.</div>
                 {% if form.work_description.errors %}<div class="invalid-feedback d-block">{{ form.work_description.errors.0 }}</div>{% endif %}
               </div>
               <div class="col-12">
@@ -45,7 +69,7 @@
               </div>
             </div>
             <div class="d-flex gap-3 mt-4 flex-wrap">
-              <button type="submit" class="btn btn-primary">Send Request</button>
+              <button type="submit" id="submitBookingBtn" class="btn btn-primary">Send Request</button>
               <a href="{{ service.get_absolute_url }}" class="btn btn-secondary">Cancel</a>
             </div>
           </form>
@@ -75,4 +99,262 @@
     </div>
   </div>
 </div>
+
+{% block extra_js %}
+<script id="serviceAvailabilityData" type="application/json">
+{{ availability_json|safe }}
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const rawDataEl = document.getElementById('serviceAvailabilityData');
+  let availabilityData = {};
+  try {
+    availabilityData = JSON.parse(rawDataEl.textContent || '{}');
+  } catch(e) {}
+
+  const dateInput = document.getElementById('id_requested_date');
+  const timeInput = document.getElementById('id_requested_time');
+  const dateFeedback = document.getElementById('dateFeedback');
+  const timeFeedback = document.getElementById('timeFeedback');
+  const form = document.getElementById('bookingRequestForm');
+
+  function formatTimeDisplay(timeStr) {
+    if (!timeStr) return '';
+    const parts = timeStr.split(':');
+    let h = parseInt(parts[0], 10);
+    const m = parts[1] || '00';
+    const meridiem = h >= 12 ? 'PM' : 'AM';
+    h = h % 12;
+    if (h === 0) h = 12;
+    return `${h < 10 ? '0' + h : h}:${m} ${meridiem}`;
+  }
+
+  function timeToMinutes(timeStr) {
+    if (!timeStr) return null;
+    const parts = timeStr.split(':');
+    return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+  }
+
+  function minutesToDisplay(mins) {
+    let h = Math.floor(mins / 60);
+    const m = mins % 60;
+    const meridiem = h >= 12 ? 'PM' : 'AM';
+    h = h % 12;
+    if (h === 0) h = 12;
+    return `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m} ${meridiem}`;
+  }
+
+  function validateDate() {
+    if (!dateInput || !dateFeedback) return true;
+    const dateVal = dateInput.value.trim();
+    if (!dateVal) {
+      dateInput.classList.remove('is-valid', 'is-invalid');
+      dateFeedback.innerHTML = '';
+      return false;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(dateVal + 'T00:00:00');
+    if (selectedDate < today) {
+      dateInput.classList.remove('is-valid');
+      dateInput.classList.add('is-invalid');
+      dateFeedback.innerHTML = '<span class="text-danger fw-semibold">⚠️ Preferred date cannot be in the past.</span>';
+      return false;
+    }
+
+    if (availabilityData.has_availability) {
+      const jsDay = selectedDate.getDay();
+      const pyWeekday = (jsDay + 6) % 7;
+      const allowedDays = availabilityData.available_weekday_indices || [];
+
+      if (!allowedDays.includes(pyWeekday)) {
+        dateInput.classList.remove('is-valid');
+        dateInput.classList.add('is-invalid');
+        const dayName = dayNames[pyWeekday];
+        dateFeedback.innerHTML = `<span class="text-danger fw-semibold">⚠️ ${availabilityData.provider_name} is closed on ${dayName}s. Available working days: ${availabilityData.available_days_display}.</span>`;
+        return false;
+      }
+
+      const daySched = (availabilityData.days && availabilityData.days[pyWeekday]) || {};
+      dateInput.classList.remove('is-invalid');
+      dateInput.classList.add('is-valid');
+      dateFeedback.innerHTML = `<span class="text-success fw-semibold">✓ Open on ${dayNames[pyWeekday]} (${daySched.start_str || availabilityData.start_time_str} – ${daySched.end_str || availabilityData.end_time_str})</span>`;
+      return true;
+    }
+
+    dateInput.classList.remove('is-invalid');
+    dateInput.classList.add('is-valid');
+    dateFeedback.innerHTML = '<span class="text-success fw-semibold">✓ Date selected</span>';
+    return true;
+  }
+
+  function validateTime() {
+    if (!timeInput || !timeFeedback) return true;
+    const timeVal = timeInput.value.trim();
+    const dateVal = dateInput ? dateInput.value.trim() : '';
+
+    if (!timeVal) {
+      timeInput.classList.remove('is-valid', 'is-invalid');
+      timeFeedback.innerHTML = '';
+      return true;
+    }
+
+    if (!dateVal) {
+      timeInput.classList.remove('is-valid');
+      timeInput.classList.add('is-invalid');
+      timeFeedback.innerHTML = '<span class="text-danger fw-semibold">⚠️ Please select a preferred date first.</span>';
+      return false;
+    }
+
+    if (!validateDate()) {
+      timeInput.classList.remove('is-valid');
+      timeInput.classList.add('is-invalid');
+      timeFeedback.innerHTML = '<span class="text-danger fw-semibold">⚠️ Selected date is unavailable.</span>';
+      return false;
+    }
+
+    if (availabilityData.has_availability) {
+      const selectedDate = new Date(dateVal + 'T00:00:00');
+      const pyWeekday = (selectedDate.getDay() + 6) % 7;
+      const daySched = (availabilityData.days && availabilityData.days[pyWeekday]) || {};
+
+      if (!daySched.available) {
+        timeInput.classList.remove('is-valid');
+        timeInput.classList.add('is-invalid');
+        timeFeedback.innerHTML = `<span class="text-danger fw-semibold">⚠️ Provider is closed on this day.</span>`;
+        return false;
+      }
+
+      const startMins = timeToMinutes(daySched.start_time || '09:00');
+      const endMins = timeToMinutes(daySched.end_time || '18:00');
+      const enteredMins = timeToMinutes(timeVal);
+      const durationHours = availabilityData.duration_hours || 1;
+      const durationMins = durationHours * 60;
+      const serviceEndMins = enteredMins + durationMins;
+
+      if (enteredMins < startMins) {
+        timeInput.classList.remove('is-valid');
+        timeInput.classList.add('is-invalid');
+        timeFeedback.innerHTML = `<span class="text-danger fw-semibold">⚠️ Provider opens at ${daySched.start_str || formatTimeDisplay(daySched.start_time)}. Please choose a later time.</span>`;
+        return false;
+      }
+
+      if (enteredMins >= endMins) {
+        timeInput.classList.remove('is-valid');
+        timeInput.classList.add('is-invalid');
+        timeFeedback.innerHTML = `<span class="text-danger fw-semibold">⚠️ Provider closes at ${daySched.end_str || formatTimeDisplay(daySched.end_time)}.</span>`;
+        return false;
+      }
+
+      if (serviceEndMins > endMins) {
+        timeInput.classList.remove('is-valid');
+        timeInput.classList.add('is-invalid');
+        const maxStartMins = endMins - durationMins;
+        const maxStartStr = minutesToDisplay(maxStartMins);
+        const finishStr = minutesToDisplay(serviceEndMins);
+        timeFeedback.innerHTML = `<span class="text-danger fw-semibold">⚠️ Service takes ${durationHours} hr(s). A booking at ${formatTimeDisplay(timeVal)} finishes at ${finishStr}, after closing time (${daySched.end_str}). Latest booking is ${maxStartStr}.</span>`;
+        return false;
+      }
+
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      if (dateVal === todayStr) {
+        const currentMins = now.getHours() * 60 + now.getMinutes();
+        if (enteredMins < currentMins) {
+          timeInput.classList.remove('is-valid');
+          timeInput.classList.add('is-invalid');
+          timeFeedback.innerHTML = `<span class="text-danger fw-semibold">⚠️ Selected time has already passed for today.</span>`;
+          return false;
+        }
+      }
+
+      const bookedSlots = availabilityData.booked_slots || [];
+      for (let i = 0; i < bookedSlots.length; i++) {
+        const slot = bookedSlots[i];
+        if (slot.date === dateVal) {
+          const bStart = timeToMinutes(slot.start_time);
+          const bEnd = timeToMinutes(slot.end_time);
+          if (enteredMins < bEnd && serviceEndMins > bStart) {
+            timeInput.classList.remove('is-valid');
+            timeInput.classList.add('is-invalid');
+            timeFeedback.innerHTML = `<span class="text-danger fw-semibold">⚠️ Conflicts with an existing booking (${slot.start_str} – ${slot.end_str}). Please select another time.</span>`;
+            return false;
+          }
+        }
+      }
+
+      timeInput.classList.remove('is-invalid');
+      timeInput.classList.add('is-valid');
+      timeFeedback.innerHTML = `<span class="text-success fw-semibold">✓ Slot available: ${formatTimeDisplay(timeVal)} – ${minutesToDisplay(serviceEndMins)}</span>`;
+      return true;
+    }
+
+    timeInput.classList.remove('is-invalid');
+    timeInput.classList.add('is-valid');
+    timeFeedback.innerHTML = `<span class="text-success fw-semibold">✓ Time selected</span>`;
+    return true;
+  }
+
+  if (dateInput) {
+    dateInput.addEventListener('change', function() {
+      validateDate();
+      if (timeInput && timeInput.value) validateTime();
+    });
+    dateInput.addEventListener('input', function() {
+      validateDate();
+      if (timeInput && timeInput.value) validateTime();
+    });
+  }
+
+  if (timeInput) {
+    timeInput.addEventListener('change', validateTime);
+    timeInput.addEventListener('input', validateTime);
+  }
+
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      const isDateValid = validateDate();
+      const isTimeValid = validateTime();
+      if (!isDateValid || !isTimeValid) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isDateValid && dateInput) {
+          dateInput.focus();
+        } else if (!isTimeValid && timeInput) {
+          timeInput.focus();
+        }
+      }
+    });
+  }
+
+  if (dateInput && dateInput.value) validateDate();
+  if (timeInput && timeInput.value) validateTime();
+
+  window.updateServiceAvailability = function(newServiceId) {
+    fetch(`/bookings/api/availability/${newServiceId}/`)
+      .then(res => res.json())
+      .then(data => {
+        availabilityData = data;
+        if (dateInput) {
+          dateInput.value = '';
+          dateInput.classList.remove('is-valid', 'is-invalid');
+          if (dateFeedback) dateFeedback.innerHTML = '';
+        }
+        if (timeInput) {
+          timeInput.value = '';
+          timeInput.classList.remove('is-valid', 'is-invalid');
+          if (timeFeedback) timeFeedback.innerHTML = '';
+        }
+        const dispDays = document.getElementById('displayWorkingDays');
+        const dispHours = document.getElementById('displayWorkingHours');
+        if (dispDays) dispDays.textContent = data.available_days_display;
+        if (dispHours) dispHours.textContent = `${data.start_time_str} – ${data.end_time_str}`;
+      })
+      .catch(err => console.error('Error updating availability:', err));
+  };
+});
+</script>
+{% endblock %}
 {% endblock %}

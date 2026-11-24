@@ -67,10 +67,51 @@
                 {{ form.area }}
               </div>
 
+              <div class="col-12 mt-4 pt-3" style="border-top:1px solid var(--color-border);">
+                <h3 style="font-size:1.05rem;font-weight:700;margin-bottom:0.4rem;">Provider Availability &amp; Working Hours</h3>
+                <p class="text-muted" style="font-size:0.85rem;margin-bottom:1rem;">Configure your working days and daily hours. Customers will only be able to book during these times.</p>
+              </div>
+
               <div class="col-12">
-                <label class="form-label" for="{{ form.availability.id_for_label }}">Availability</label>
+                <label class="form-label fw-semibold">Available Working Days *</label>
+                <div class="d-flex flex-wrap gap-3 p-3 rounded-3" style="background:#f8faf9;border:1px solid var(--color-border);">
+                  {% for checkbox in form.working_days %}
+                  <div class="form-check form-check-inline">
+                    {{ checkbox.tag }}
+                    <label class="form-check-label" for="{{ checkbox.id_for_label }}" style="font-size:0.9rem;">
+                      {{ checkbox.choice_label }}
+                    </label>
+                  </div>
+                  {% endfor %}
+                </div>
+                {% if form.working_days.errors %}<div class="invalid-feedback d-block">{{ form.working_days.errors.0 }}</div>{% endif %}
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label" for="{{ form.start_time.id_for_label }}">Starting Time *</label>
+                {{ form.start_time }}
+                <div class="form-text">e.g. 10:00 AM</div>
+                {% if form.start_time.errors %}<div class="invalid-feedback d-block">{{ form.start_time.errors.0 }}</div>{% endif %}
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label" for="{{ form.end_time.id_for_label }}">Closing Time *</label>
+                {{ form.end_time }}
+                <div class="form-text">e.g. 10:00 PM</div>
+                {% if form.end_time.errors %}<div class="invalid-feedback d-block">{{ form.end_time.errors.0 }}</div>{% endif %}
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label" for="{{ form.duration_hours.id_for_label }}">Service Duration (Hours)</label>
+                {{ form.duration_hours }}
+                <div class="form-text">e.g. 1 or 2 hours</div>
+                {% if form.duration_hours.errors %}<div class="invalid-feedback d-block">{{ form.duration_hours.errors.0 }}</div>{% endif %}
+              </div>
+
+              <div class="col-12">
+                <label class="form-label" for="{{ form.availability.id_for_label }}">Availability Note / Summary</label>
                 {{ form.availability }}
-                <div class="form-text">e.g. Mon–Sat, 9 AM–6 PM</div>
+                <div class="form-text">Optional custom note shown to customers. Auto-generated if left blank.</div>
               </div>
 
               <div class="col-12">
