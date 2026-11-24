@@ -8,6 +8,17 @@ class ServiceAdminForm(forms.ModelForm):
         model = Service
         fields = '__all__'
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'duration_hours' in self.fields:
+            self.fields['duration_hours'].required = False
+        if 'available_days' in self.fields:
+            self.fields['available_days'].required = False
+        if 'start_time' in self.fields:
+            self.fields['start_time'].required = False
+        if 'end_time' in self.fields:
+            self.fields['end_time'].required = False
+
     def clean_provider(self):
         provider = self.cleaned_data['provider']
         if not hasattr(provider, 'profile') or not provider.profile.is_provider:

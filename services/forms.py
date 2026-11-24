@@ -61,9 +61,6 @@ class ServiceForm(forms.ModelForm):
                     self.fields['start_time'].initial = first_d['start_time']
                     self.fields['end_time'].initial = first_d['end_time']
         else:
-            self.fields['working_days'].initial = ['0', '1', '2', '3', '4', '5']
-            self.fields['start_time'].initial = '09:00'
-            self.fields['end_time'].initial = '18:00'
             self.fields['duration_hours'].initial = 1
 
     def save(self, commit=True):

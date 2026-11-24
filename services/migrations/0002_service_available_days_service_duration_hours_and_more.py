@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='service',
             name='duration_hours',
-            field=models.PositiveIntegerField(default=1, help_text='Estimated service duration in hours'),
+            field=models.PositiveIntegerField(blank=True, default=1, help_text='Estimated service duration in hours'),
         ),
         migrations.AddField(
             model_name='service',

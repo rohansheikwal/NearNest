@@ -211,9 +211,6 @@ def service_create(request):
             return redirect('services:provider_dashboard')
     else:
         form = ServiceForm()
-        # Pre-fill city/area from provider profile
-        profile = request.user.profile
-        form.initial = {'city': profile.city, 'area': profile.area}
     return render(request, 'services/service_form.html', {'form': form, 'action': 'Create'})
 
 
