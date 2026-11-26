@@ -8,8 +8,10 @@
         <ol class="breadcrumb" style="font-size:0.82rem;">
           <li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
           {% if is_provider_view %}
-          <li class="breadcrumb-item"><a href="{% url 'services:provider_dashboard' %}?portal=provider">Dashboard</a></li>
-          <li class="breadcrumb-item"><a href="{% url 'services:provider_requests' %}?portal=provider">Customer Requests</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'services:provider_dashboard' %}?portal=provider">Dashboard</a>
+          </li>
+          <li class="breadcrumb-item"><a href="{% url 'services:provider_requests' %}?portal=provider">Customer
+              Requests</a></li>
           {% else %}
           <li class="breadcrumb-item"><a href="{% url 'accounts:customer_dashboard' %}">Dashboard</a></li>
           <li class="breadcrumb-item"><a href="{% url 'bookings:my_requests' %}">My Requests</a></li>
@@ -27,7 +29,8 @@
 
       <!-- ================= Visual Booking Stepper ================= -->
       {% if service_request.status == 'cancelled' %}
-      <div class="alert alert-danger d-flex align-items-center gap-2 mb-4 shadow-sm" role="alert" style="border-radius:var(--radius-md);">
+      <div class="alert alert-danger d-flex align-items-center gap-2 mb-4 shadow-sm" role="alert"
+        style="border-radius:var(--radius-md);">
         <span style="font-size:1.3rem;">❌</span>
         <div>
           <strong class="d-block">Booking Cancelled</strong>
@@ -35,19 +38,24 @@
         </div>
       </div>
       {% elif service_request.status == 'rejected' %}
-      <div class="alert alert-secondary d-flex align-items-center gap-2 mb-4 shadow-sm" role="alert" style="border-radius:var(--radius-md);">
+      <div class="alert alert-secondary d-flex align-items-center gap-2 mb-4 shadow-sm" role="alert"
+        style="border-radius:var(--radius-md);">
         <span style="font-size:1.3rem;">⚠️</span>
         <div>
           <strong class="d-block">Booking Declined</strong>
-          <span class="small">The provider was unable to take this booking. Please check other available providers.</span>
+          <span class="small">The provider was unable to take this booking. Please check other available
+            providers.</span>
         </div>
       </div>
       {% else %}
-      <div class="card mb-4 border-0 shadow-sm" style="border:1px solid var(--color-border) !important;border-radius:var(--radius-md);overflow:hidden;">
+      <div class="card mb-4 border-0 shadow-sm"
+        style="border:1px solid var(--color-border) !important;border-radius:var(--radius-md);overflow:hidden;">
         <div class="card-body p-4">
           <div class="booking-stepper d-flex align-items-center justify-content-between position-relative">
             <!-- Progress Line Background -->
-            <div class="stepper-line-bg" style="position:absolute;top:20px;left:10%;right:10%;height:3px;background:var(--color-border);z-index:1;"></div>
+            <div class="stepper-line-bg"
+              style="position:absolute;top:20px;left:10%;right:10%;height:3px;background:var(--color-border);z-index:1;">
+            </div>
             <!-- Progress Line Active -->
             <div class="stepper-line-active" style="position:absolute;top:20px;left:10%;height:3px;background:var(--color-primary);z-index:2;transition:width 0.4s ease;
               {% if service_request.status == 'pending' %}width:0%;
@@ -60,17 +68,18 @@
             <!-- Step 1: Requested -->
             <div class="stepper-step text-center position-relative" style="z-index:3;flex:1;">
               <div class="stepper-circle d-flex align-items-center justify-content-center mx-auto rounded-circle mb-2"
-                   style="width:40px;height:40px;background:var(--color-primary);color:#fff;font-weight:700;box-shadow:0 0 0 4px #eef3ec;">
+                style="width:40px;height:40px;background:var(--color-primary);color:#fff;font-weight:700;box-shadow:0 0 0 4px #eef3ec;">
                 ✓
               </div>
               <div class="stepper-label fw-bold small text-dark">Requested</div>
-              <div class="stepper-sub text-muted" style="font-size:0.72rem;">{{ service_request.created_at|date:"d M" }}</div>
+              <div class="stepper-sub text-muted" style="font-size:0.72rem;">{{ service_request.created_at|date:"d M" }}
+              </div>
             </div>
 
             <!-- Step 2: Confirmed -->
             <div class="stepper-step text-center position-relative" style="z-index:3;flex:1;">
               <div class="stepper-circle d-flex align-items-center justify-content-center mx-auto rounded-circle mb-2"
-                   style="width:40px;height:40px;font-weight:700;
+                style="width:40px;height:40px;font-weight:700;
                    {% if service_request.status == 'accepted' or service_request.status == 'inprogress' or service_request.status == 'completed' %}
                      background:var(--color-primary);color:#fff;box-shadow:0 0 0 4px #eef3ec;
                    {% else %}
@@ -78,7 +87,8 @@
                    {% endif %}">
                 {% if service_request.status == 'accepted' or service_request.status == 'inprogress' or service_request.status == 'completed' %}✓{% else %}2{% endif %}
               </div>
-              <div class="stepper-label {% if service_request.status == 'accepted' or service_request.status == 'inprogress' or service_request.status == 'completed' %}fw-bold text-dark{% else %}text-muted{% endif %} small">
+              <div
+                class="stepper-label {% if service_request.status == 'accepted' or service_request.status == 'inprogress' or service_request.status == 'completed' %}fw-bold text-dark{% else %}text-muted{% endif %} small">
                 Confirmed
               </div>
               <div class="stepper-sub text-muted" style="font-size:0.72rem;">By Provider</div>
@@ -87,7 +97,7 @@
             <!-- Step 3: In Progress -->
             <div class="stepper-step text-center position-relative" style="z-index:3;flex:1;">
               <div class="stepper-circle d-flex align-items-center justify-content-center mx-auto rounded-circle mb-2"
-                   style="width:40px;height:40px;font-weight:700;
+                style="width:40px;height:40px;font-weight:700;
                    {% if service_request.status == 'inprogress' or service_request.status == 'completed' %}
                      background:var(--color-primary);color:#fff;box-shadow:0 0 0 4px #eef3ec;
                    {% else %}
@@ -95,7 +105,8 @@
                    {% endif %}">
                 {% if service_request.status == 'completed' %}✓{% elif service_request.status == 'inprogress' %}🛠️{% else %}3{% endif %}
               </div>
-              <div class="stepper-label {% if service_request.status == 'inprogress' or service_request.status == 'completed' %}fw-bold text-dark{% else %}text-muted{% endif %} small">
+              <div
+                class="stepper-label {% if service_request.status == 'inprogress' or service_request.status == 'completed' %}fw-bold text-dark{% else %}text-muted{% endif %} small">
                 In Progress
               </div>
               <div class="stepper-sub text-muted" style="font-size:0.72rem;">Work Started</div>
@@ -104,7 +115,7 @@
             <!-- Step 4: Completed -->
             <div class="stepper-step text-center position-relative" style="z-index:3;flex:1;">
               <div class="stepper-circle d-flex align-items-center justify-content-center mx-auto rounded-circle mb-2"
-                   style="width:40px;height:40px;font-weight:700;
+                style="width:40px;height:40px;font-weight:700;
                    {% if service_request.status == 'completed' %}
                      background:#16a34a;color:#fff;box-shadow:0 0 0 4px #dcfce7;
                    {% else %}
@@ -112,7 +123,8 @@
                    {% endif %}">
                 {% if service_request.status == 'completed' %}⭐{% else %}4{% endif %}
               </div>
-              <div class="stepper-label {% if service_request.status == 'completed' %}fw-bold text-success{% else %}text-muted{% endif %} small">
+              <div
+                class="stepper-label {% if service_request.status == 'completed' %}fw-bold text-success{% else %}text-muted{% endif %} small">
                 Completed
               </div>
               <div class="stepper-sub text-muted" style="font-size:0.72rem;">Finished</div>
@@ -128,12 +140,14 @@
           <div class="d-flex align-items-start gap-3">
             {% if service_request.service.image %}
             <img src="{{ service_request.service.image.url }}" alt="{{ service_request.service.title }}"
-                 style="width:80px;height:80px;border-radius:var(--radius-md);object-fit:cover;flex-shrink:0;">
+              style="width:80px;height:80px;border-radius:var(--radius-md);object-fit:cover;flex-shrink:0;">
             {% endif %}
             <div>
               <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.25rem;">{{ service_request.service.title }}</h3>
-              <div style="font-size:0.85rem;color:var(--color-text-muted);">by {{ service_request.service.provider.profile.get_display_name }}</div>
-              <div style="font-size:0.9rem;font-weight:600;color:var(--color-primary);margin-top:0.25rem;">{{ service_request.service.get_price_display }}</div>
+              <div style="font-size:0.85rem;color:var(--color-text-muted);">by {{
+                service_request.service.provider.profile.get_display_name }}</div>
+              <div style="font-size:0.9rem;font-weight:600;color:var(--color-primary);margin-top:0.25rem;">{{
+                service_request.service.get_price_display }}</div>
             </div>
           </div>
         </div>
@@ -144,36 +158,50 @@
           <h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem;">Request Information</h2>
           <div class="row g-3">
             <div class="col-sm-6">
-              <div style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">Requested Date</div>
+              <div
+                style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">
+                Requested Date</div>
               <div>{{ service_request.requested_date|date:"l, d F Y" }}</div>
             </div>
             {% if service_request.requested_time %}
             <div class="col-sm-6">
-              <div style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">Preferred Time</div>
+              <div
+                style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">
+                Preferred Time</div>
               <div>{{ service_request.requested_time }}</div>
             </div>
             {% endif %}
             <div class="col-12">
-              <div style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">Service Location</div>
+              <div
+                style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">
+                Service Location</div>
               <div>{{ service_request.service_location }}</div>
             </div>
             <div class="col-12">
-              <div style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">Work Description</div>
+              <div
+                style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">
+                Work Description</div>
               <div>{{ service_request.work_description }}</div>
             </div>
             {% if service_request.notes %}
             <div class="col-12">
-              <div style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">Additional Notes</div>
+              <div
+                style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">
+                Additional Notes</div>
               <div>{{ service_request.notes }}</div>
             </div>
             {% endif %}
             <div class="col-sm-6">
-              <div style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">Submitted On</div>
+              <div
+                style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">
+                Submitted On</div>
               <div>{{ service_request.created_at|date:"d M Y, g:i A" }}</div>
             </div>
             {% if is_provider_view %}
             <div class="col-sm-6">
-              <div style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">Customer</div>
+              <div
+                style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-light);margin-bottom:0.25rem;">
+                Customer</div>
               <div>{{ service_request.customer.profile.get_display_name }}</div>
             </div>
             {% endif %}
@@ -184,7 +212,8 @@
       {% if service_request.provider_response %}
       <div class="card mb-4" style="border-color:var(--color-secondary) !important;">
         <div class="card-body p-4">
-          <h2 style="font-size:1rem;font-weight:700;margin-bottom:0.75rem;color:var(--color-primary);">Provider Response</h2>
+          <h2 style="font-size:1rem;font-weight:700;margin-bottom:0.75rem;color:var(--color-primary);">Provider Response
+          </h2>
           <p style="margin:0;">{{ service_request.provider_response }}</p>
         </div>
       </div>
@@ -192,8 +221,8 @@
 
       <!-- Actions -->
       <div class="d-flex gap-3 flex-wrap align-items-center">
-        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2"
-                data-bs-toggle="offcanvas" data-bs-target="#bookingChatDrawer">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="offcanvas"
+          data-bs-target="#bookingChatDrawer">
           <span>💬 Chat with {% if is_provider_view %}Customer{% else %}Provider{% endif %}</span>
           {% if booking_messages %}
           <span class="badge bg-white text-primary rounded-pill">{{ booking_messages|length }}</span>
@@ -202,7 +231,7 @@
 
         {% if not is_provider_view and service_request.can_be_cancelled %}
         <form method="POST" action="{% url 'bookings:cancel_request' service_request.pk %}"
-              onsubmit="return confirm('Are you sure you want to cancel this request?')">
+          onsubmit="return confirm('Are you sure you want to cancel this request?')">
           {% csrf_token %}
           <button type="submit" class="btn btn-danger">Cancel Request</button>
         </form>
@@ -231,9 +260,8 @@
 </div>
 
 <!-- ================= Floating Side Chat Button (Pinned to screen right edge) ================= -->
-<button type="button" class="floating-chat-trigger shadow d-flex align-items-center gap-2"
-        data-bs-toggle="offcanvas" data-bs-target="#bookingChatDrawer" aria-controls="bookingChatDrawer"
-        title="Open Chat for this booking">
+<button type="button" class="floating-chat-trigger shadow d-flex align-items-center gap-2" data-bs-toggle="offcanvas"
+  data-bs-target="#bookingChatDrawer" aria-controls="bookingChatDrawer" title="Open Chat for this booking">
   <span style="font-size:1.25rem;">💬</span>
   <span class="d-none d-sm-inline">Chat</span>
   {% if booking_messages %}
@@ -242,43 +270,50 @@
 </button>
 
 <!-- ================= Slide-in Right Chat Drawer (Offcanvas) ================= -->
-<div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="bookingChatDrawer" aria-labelledby="bookingChatDrawerLabel"
-     style="width: 420px; max-width: 92vw; border-left: 1px solid var(--color-border); z-index: 1060;">
+<div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="bookingChatDrawer"
+  aria-labelledby="bookingChatDrawerLabel"
+  style="width: 420px; max-width: 92vw; border-left: 1px solid var(--color-border); z-index: 1060;">
   <!-- Drawer Header -->
   <div class="offcanvas-header bg-light border-bottom py-3 px-4">
     <div class="d-flex align-items-center gap-3">
       {% if is_provider_view %}
-        {% if service_request.customer.profile.profile_image %}
-        <img src="{{ service_request.customer.profile.profile_image.url }}" class="rounded-circle" width="38" height="38" style="object-fit:cover;">
-        {% else %}
-        <div style="width:38px;height:38px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">
-          {{ service_request.customer.profile.get_display_name|first|upper }}
-        </div>
-        {% endif %}
-        <div>
-          <h5 class="offcanvas-title fw-bold mb-0" id="bookingChatDrawerLabel" style="font-size:1rem;font-family:var(--font-main);">
-            {{ service_request.customer.profile.get_display_name }}
-          </h5>
-          <div class="text-muted extra-small" style="font-size:0.75rem;">
-            Customer • Request #{{ service_request.pk }}
-          </div>
-        </div>
+      {% if service_request.customer.profile.profile_image %}
+      <img src="{{ service_request.customer.profile.profile_image.url }}" class="rounded-circle" width="38" height="38"
+        style="object-fit:cover;">
       {% else %}
-        {% if service_request.service.provider.profile.profile_image %}
-        <img src="{{ service_request.service.provider.profile.profile_image.url }}" class="rounded-circle" width="38" height="38" style="object-fit:cover;">
-        {% else %}
-        <div style="width:38px;height:38px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">
-          {{ service_request.service.provider.profile.get_display_name|first|upper }}
+      <div
+        style="width:38px;height:38px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">
+        {{ service_request.customer.profile.get_display_name|first|upper }}
+      </div>
+      {% endif %}
+      <div>
+        <h5 class="offcanvas-title fw-bold mb-0" id="bookingChatDrawerLabel"
+          style="font-size:1rem;font-family:var(--font-main);">
+          {{ service_request.customer.profile.get_display_name }}
+        </h5>
+        <div class="text-muted extra-small" style="font-size:0.75rem;">
+          Customer • Request #{{ service_request.pk }}
         </div>
-        {% endif %}
-        <div>
-          <h5 class="offcanvas-title fw-bold mb-0" id="bookingChatDrawerLabel" style="font-size:1rem;font-family:var(--font-main);">
-            {{ service_request.service.provider.profile.get_display_name }}
-          </h5>
-          <div class="text-muted extra-small" style="font-size:0.75rem;">
-            Provider • {{ service_request.service.title|truncatechars:22 }}
-          </div>
+      </div>
+      {% else %}
+      {% if service_request.service.provider.profile.profile_image %}
+      <img src="{{ service_request.service.provider.profile.profile_image.url }}" class="rounded-circle" width="38"
+        height="38" style="object-fit:cover;">
+      {% else %}
+      <div
+        style="width:38px;height:38px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">
+        {{ service_request.service.provider.profile.get_display_name|first|upper }}
+      </div>
+      {% endif %}
+      <div>
+        <h5 class="offcanvas-title fw-bold mb-0" id="bookingChatDrawerLabel"
+          style="font-size:1rem;font-family:var(--font-main);">
+          {{ service_request.service.provider.profile.get_display_name }}
+        </h5>
+        <div class="text-muted extra-small" style="font-size:0.75rem;">
+          Provider • {{ service_request.service.title|truncatechars:22 }}
         </div>
+      </div>
       {% endif %}
     </div>
     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
@@ -287,59 +322,77 @@
   <!-- Drawer Body -->
   <div class="offcanvas-body d-flex flex-column p-3" style="background:#fdfcfb; height:calc(100vh - 75px);">
     <!-- Service Status Mini Banner -->
-    <div class="p-2 mb-3 bg-white rounded-3 border d-flex align-items-center justify-content-between" style="font-size:0.8rem;">
-      <span class="text-muted">Service: <strong class="text-dark">{{ service_request.service.title|truncatechars:20 }}</strong></span>
-      <span class="badge {{ service_request.get_status_badge_class }}" style="font-size:0.72rem;">{{ service_request.get_status_display }}</span>
+    <div class="p-2 mb-3 bg-white rounded-3 border d-flex align-items-center justify-content-between"
+      style="font-size:0.8rem;">
+      <span class="text-muted">Service: <strong class="text-dark">{{ service_request.service.title|truncatechars:20
+          }}</strong></span>
+      <span class="badge {{ service_request.get_status_badge_class }}" style="font-size:0.72rem;">{{
+        service_request.get_status_display }}</span>
     </div>
 
     <!-- Messages Container -->
-    <div id="chatMessages" class="chat-messages d-flex flex-column gap-3 flex-grow-1 overflow-auto pe-1 mb-3" style="min-height:220px;">
+    <div id="chatMessages" class="chat-messages d-flex flex-column gap-3 flex-grow-1 overflow-auto pe-1 mb-3"
+      style="min-height:220px;">
       {% if booking_messages %}
-        {% for msg in booking_messages %}
-          <div class="d-flex flex-column {% if msg.sender == request.user %}align-items-end{% else %}align-items-start{% endif %}" id="msg-{{ msg.pk }}">
-            <div class="small fw-semibold text-muted mb-1" style="font-size:0.72rem;">
-              {% if msg.sender == request.user %}You{% else %}{{ msg.sender.profile.get_display_name }}{% endif %}
-            </div>
-            <div class="p-3 rounded-3 shadow-sm {% if msg.sender == request.user %}text-white{% else %}bg-white border text-dark{% endif %}"
-                 style="max-width:85%;font-size:0.88rem;line-height:1.4;{% if msg.sender == request.user %}background-color:var(--color-primary);border-bottom-right-radius:4px !important;{% else %}border-bottom-left-radius:4px !important;{% endif %}">
-              {{ msg.message }}
-            </div>
-            <div class="text-muted mt-1" style="font-size:0.68rem;">
-              {{ msg.created_at|date:"d M, g:i A" }}
-            </div>
-          </div>
-        {% endfor %}
-      {% else %}
-        <div id="noMessagesPlaceholder" class="text-center py-5 my-auto text-muted">
-          <div style="font-size:2.2rem;margin-bottom:0.5rem;">💬</div>
-          <div class="fw-semibold small">No messages yet</div>
-          <div style="font-size:0.78rem;">Send a quick message to coordinate service arrival or instructions.</div>
+      {% for msg in booking_messages %}
+      <div
+        class="d-flex flex-column {% if msg.sender == request.user %}align-items-end{% else %}align-items-start{% endif %}"
+        id="msg-{{ msg.pk }}">
+        <div class="small fw-semibold text-muted mb-1" style="font-size:0.72rem;">
+          {% if msg.sender == request.user %}You{% else %}{{ msg.sender.profile.get_display_name }}{% endif %}
         </div>
+        <div
+          class="p-3 rounded-3 shadow-sm {% if msg.sender == request.user %}text-white{% else %}bg-white border text-dark{% endif %}"
+          style="max-width:85%;font-size:0.88rem;line-height:1.4;{% if msg.sender == request.user %}background-color:var(--color-primary);border-bottom-right-radius:4px !important;{% else %}border-bottom-left-radius:4px !important;{% endif %}">
+          {{ msg.message }}
+        </div>
+        <div class="text-muted mt-1" style="font-size:0.68rem;">
+          {{ msg.created_at|date:"d M, g:i A" }}
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div id="noMessagesPlaceholder" class="text-center py-5 my-auto text-muted">
+        <div style="font-size:2.2rem;margin-bottom:0.5rem;">💬</div>
+        <div class="fw-semibold small">No messages yet</div>
+        <div style="font-size:0.78rem;">Send a quick message to coordinate service arrival or instructions.</div>
+      </div>
       {% endif %}
     </div>
 
     <!-- Quick Shortcuts -->
     <div class="mb-2">
-      <div class="text-muted extra-small mb-1 fw-semibold" style="font-size:0.7rem;letter-spacing:0.04em;">QUICK SHORTCUTS:</div>
+      <div class="text-muted extra-small mb-1 fw-semibold" style="font-size:0.7rem;letter-spacing:0.04em;">QUICK
+        SHORTCUTS:</div>
       <div class="d-flex flex-wrap gap-1">
         {% if is_provider_view %}
-          <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 chat-chip" style="font-size:0.74rem;" onclick="fillChatInput('🚗 On my way to your location!')">🚗 On my way</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 chat-chip" style="font-size:0.74rem;" onclick="fillChatInput('⏱️ Running 10 mins late.')">⏱️ 10 min late</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 chat-chip" style="font-size:0.74rem;" onclick="fillChatInput('📍 I have arrived at your address.')">📍 Arrived</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 chat-chip" style="font-size:0.74rem;" onclick="fillChatInput('📞 Please confirm your flat number.')">📞 Flat no?</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 chat-chip" style="font-size:0.74rem;"
+          onclick="fillChatInput('🚗 On my way to your location!')">🚗 On my way</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 chat-chip" style="font-size:0.74rem;"
+          onclick="fillChatInput('⏱️ Running 10 mins late.')">⏱️ 10 min late</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 chat-chip" style="font-size:0.74rem;"
+          onclick="fillChatInput('📍 I have arrived at your address.')">📍 Arrived</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 chat-chip" style="font-size:0.74rem;"
+          onclick="fillChatInput('📞 Please confirm your flat number.')">📞 Flat no?</button>
         {% else %}
-          <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 chat-chip" style="font-size:0.74rem;" onclick="fillChatInput('📞 Please call me when you reach.')">📞 Call me</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 chat-chip" style="font-size:0.74rem;" onclick="fillChatInput('📍 Exact flat number: ')">📍 Flat no</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 chat-chip" style="font-size:0.74rem;" onclick="fillChatInput('🕒 What time will you arrive?')">🕒 Arrival time?</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 chat-chip" style="font-size:0.74rem;" onclick="fillChatInput('👍 Ready and waiting.')">👍 Ready</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 chat-chip" style="font-size:0.74rem;"
+          onclick="fillChatInput('📞 Please call me when you reach.')">📞 Call me</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 chat-chip" style="font-size:0.74rem;"
+          onclick="fillChatInput('📍 Exact flat number: ')">📍 Flat no</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 chat-chip" style="font-size:0.74rem;"
+          onclick="fillChatInput('🕒 What time will you arrive?')">🕒 Arrival time?</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 chat-chip" style="font-size:0.74rem;"
+          onclick="fillChatInput('👍 Ready and waiting.')">👍 Ready</button>
         {% endif %}
       </div>
     </div>
 
     <!-- Chat Form Input -->
-    <form id="chatForm" method="POST" action="{% url 'bookings:send_booking_message' service_request.pk %}" class="d-flex gap-2 pt-2 border-top">
+    <form id="chatForm" method="POST" action="{% url 'bookings:send_booking_message' service_request.pk %}"
+      class="d-flex gap-2 pt-2 border-top">
       {% csrf_token %}
-      <input type="text" name="message" id="chatInput" class="form-control" placeholder="Type a message..." required autocomplete="off" style="border-radius:var(--radius-md);font-size:0.88rem;">
+      <input type="text" name="message" id="chatInput" class="form-control" placeholder="Type a message..." required
+        autocomplete="off" style="border-radius:var(--radius-md);font-size:0.88rem;">
       <button type="submit" id="chatSendBtn" class="btn btn-primary px-3" style="border-radius:var(--radius-md);">
         Send
       </button>
@@ -362,12 +415,12 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function () {
     scrollChatToBottom();
 
     const drawerEl = document.getElementById('bookingChatDrawer');
     if (drawerEl) {
-      drawerEl.addEventListener('shown.bs.offcanvas', function() {
+      drawerEl.addEventListener('shown.bs.offcanvas', function () {
         scrollChatToBottom();
         const inp = document.getElementById('chatInput');
         if (inp) inp.focus();
@@ -382,7 +435,7 @@
 
     if (!form) return;
 
-    form.addEventListener('submit', function(e) {
+    form.addEventListener('submit', function (e) {
       e.preventDefault();
       const val = input.value.trim();
       if (!val) return;
@@ -398,16 +451,16 @@
           'Accept': 'application/json'
         }
       })
-      .then(res => res.json())
-      .then(data => {
-        sendBtn.disabled = false;
-        if (data.success) {
-          if (placeholder) {
-            placeholder.remove();
-          }
-          const msgEl = document.createElement('div');
-          msgEl.className = 'd-flex flex-column align-items-end';
-          msgEl.innerHTML = `
+        .then(res => res.json())
+        .then(data => {
+          sendBtn.disabled = false;
+          if (data.success) {
+            if (placeholder) {
+              placeholder.remove();
+            }
+            const msgEl = document.createElement('div');
+            msgEl.className = 'd-flex flex-column align-items-end';
+            msgEl.innerHTML = `
             <div class="small fw-semibold text-muted mb-1" style="font-size:0.75rem;">You</div>
             <div class="p-3 rounded-3 shadow-sm text-white"
                  style="max-width:80%;font-size:0.9rem;line-height:1.4;background-color:var(--color-primary);border-bottom-right-radius:4px !important;">
@@ -415,17 +468,17 @@
             </div>
             <div class="text-muted mt-1" style="font-size:0.7rem;">${data.created_at}</div>
           `;
-          container.appendChild(msgEl);
-          input.value = '';
-          scrollChatToBottom();
-        } else {
-          alert(data.error || 'Failed to send message.');
-        }
-      })
-      .catch(err => {
-        sendBtn.disabled = false;
-        form.submit();
-      });
+            container.appendChild(msgEl);
+            input.value = '';
+            scrollChatToBottom();
+          } else {
+            alert(data.error || 'Failed to send message.');
+          }
+        })
+        .catch(err => {
+          sendBtn.disabled = false;
+          form.submit();
+        });
     });
 
     function escapeHtml(str) {
@@ -433,7 +486,7 @@
     }
 
     const listUrl = "{% url 'bookings:get_booking_messages' service_request.pk %}";
-    setInterval(function() {
+    setInterval(function () {
       fetch(listUrl, { headers: { 'Accept': 'application/json' } })
         .then(r => r.json())
         .then(d => {
@@ -461,7 +514,7 @@
             }
           }
         })
-        .catch(e => {});
+        .catch(e => { });
     }, 10000);
   });
 </script>
