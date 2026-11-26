@@ -20,18 +20,9 @@
 
       <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
         <h1 style="font-size:1.5rem;">Request #{{ service_request.pk }}</h1>
-        <div class="d-flex align-items-center gap-2">
-          <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1"
-                  data-bs-toggle="offcanvas" data-bs-target="#bookingChatDrawer">
-            <span>💬 Chat</span>
-            {% if booking_messages %}
-            <span class="badge bg-primary text-white rounded-pill">{{ booking_messages|length }}</span>
-            {% endif %}
-          </button>
-          <span class="badge {{ service_request.get_status_badge_class }}" style="font-size:0.85rem;padding:0.5em 1em;">
-            {{ service_request.get_status_display }}
-          </span>
-        </div>
+        <span class="badge {{ service_request.get_status_badge_class }}" style="font-size:0.85rem;padding:0.5em 1em;">
+          {{ service_request.get_status_display }}
+        </span>
       </div>
 
       <!-- ================= Visual Booking Stepper ================= -->
