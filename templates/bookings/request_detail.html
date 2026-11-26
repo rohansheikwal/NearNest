@@ -144,10 +144,8 @@
             {% endif %}
             <div>
               <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.25rem;">{{ service_request.service.title }}</h3>
-              <div style="font-size:0.85rem;color:var(--color-text-muted);">by {{
-                service_request.service.provider.profile.get_display_name }}</div>
-              <div style="font-size:0.9rem;font-weight:600;color:var(--color-primary);margin-top:0.25rem;">{{
-                service_request.service.get_price_display }}</div>
+              <div style="font-size:0.85rem;color:var(--color-text-muted);">by {{ service_request.service.provider.profile.get_display_name }}</div>
+              <div style="font-size:0.9rem;font-weight:600;color:var(--color-primary);margin-top:0.25rem;">{{ service_request.service.get_price_display }}</div>
             </div>
           </div>
         </div>
