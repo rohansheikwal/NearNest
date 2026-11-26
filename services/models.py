@@ -308,12 +308,12 @@ class Service(models.Model):
         """Check if date is valid (not past, weekday open). Returns (bool, str)."""
         if not date_obj:
             return False, "Preferred date is required."
-        if date_obj < timezone.now().date():
+        if date_obj < timezone.localdate():
             return False, "The requested date cannot be in the past."
 
         schedule = self.get_availability_schedule()
         if not schedule['has_availability']:
-            return False, "Availability is not configured for this service."
+            return True, ""
 
         weekday = date_obj.weekday()
         if weekday not in schedule['available_weekday_indices']:
@@ -333,6 +333,9 @@ class Service(models.Model):
             return True, ""
 
         schedule = self.get_availability_schedule()
+        if not schedule['has_availability']:
+            return True, ""
+
         weekday = date_obj.weekday()
         day_sched = schedule['days'].get(weekday)
         if not day_sched or not day_sched['available']:
@@ -393,7 +396,7 @@ class Service(models.Model):
         if date_obj:
             qs = qs.filter(requested_date=date_obj)
         else:
-            qs = qs.filter(requested_date__gte=timezone.now().date())
+            qs = qs.filter(requested_date__gte=timezone.localdate())
 
         slots = []
         for req in qs.order_by('requested_date', 'requested_time'):

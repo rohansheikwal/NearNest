@@ -27,7 +27,7 @@ class ServiceRequestForm(forms.ModelForm):
     def __init__(self, *args, service=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.service = service
-        today_iso = timezone.now().date().isoformat()
+        today_iso = timezone.localdate().isoformat()
         self.fields['requested_date'].widget.attrs['min'] = today_iso
 
         if self.service:
@@ -45,7 +45,7 @@ class ServiceRequestForm(forms.ModelForm):
         date = self.cleaned_data.get('requested_date')
         if not date:
             return date
-        if date < timezone.now().date():
+        if date < timezone.localdate():
             raise forms.ValidationError("The requested date cannot be in the past.")
         if self.service:
             is_valid, msg = self.service.is_date_available(date)
