@@ -322,12 +322,9 @@
   <!-- Drawer Body -->
   <div class="offcanvas-body d-flex flex-column p-3" style="background:#fdfcfb; height:calc(100vh - 75px);">
     <!-- Service Status Mini Banner -->
-    <div class="p-2 mb-3 bg-white rounded-3 border d-flex align-items-center justify-content-between"
-      style="font-size:0.8rem;">
-      <span class="text-muted">Service: <strong class="text-dark">{{ service_request.service.title|truncatechars:20
-          }}</strong></span>
-      <span class="badge {{ service_request.get_status_badge_class }}" style="font-size:0.72rem;">{{
-        service_request.get_status_display }}</span>
+    <div class="p-2 mb-3 bg-white rounded-3 border d-flex align-items-center justify-content-between" style="font-size:0.8rem;">
+      <span class="text-muted">Service: <strong class="text-dark">{{ service_request.service.title|truncatechars:20 }}</strong></span>
+      <span class="badge {{ service_request.get_status_badge_class }}" style="font-size:0.72rem;">{{ service_request.get_status_display }}</span>
     </div>
 
     <!-- Messages Container -->

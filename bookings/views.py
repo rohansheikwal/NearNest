@@ -1,5 +1,6 @@
 import json
 from datetime import date, datetime, timedelta
+from django.utils import timezone
 from django.db import transaction
 from django.urls import reverse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -253,7 +254,7 @@ def send_booking_message(request, pk):
             'sender_name': sender_name,
             'is_me': True,
             'message': msg.message,
-            'created_at': msg.created_at.strftime('%d %b, %I:%M %p')
+            'created_at': timezone.localtime(msg.created_at).strftime('%d %b, %I:%M %p')
         })
 
     messages.success(request, "Message sent.")
@@ -276,7 +277,7 @@ def get_booking_messages(request, pk):
             'sender_name': sender_name,
             'is_me': (m.sender_id == request.user.id),
             'message': m.message,
-            'created_at': m.created_at.strftime('%d %b, %I:%M %p')
+            'created_at': timezone.localtime(m.created_at).strftime('%d %b, %I:%M %p')
         })
     return JsonResponse({'success': True, 'messages': data})
 
