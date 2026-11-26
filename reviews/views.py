@@ -28,6 +28,22 @@ def submit_review(request, request_pk):
             review = form.save(commit=False)
             review.service_request = service_request
             review.save()
+
+            # Notify provider of new review
+            try:
+                from core.models import send_notification, Notification
+                from django.urls import reverse
+                customer_name = request.user.profile.get_display_name() if hasattr(request.user, 'profile') else request.user.username
+                send_notification(
+                    user=service_request.service.provider,
+                    title=f"New {review.rating}★ Review! ⭐",
+                    message=f"{customer_name} left a {review.rating}-star review for '{service_request.service.title}'.",
+                    target_url=reverse('services:provider_reviews'),
+                    notification_type=Notification.TYPE_REVIEW
+                )
+            except Exception:
+                pass
+
             messages.success(request, "Thank you for your review!")
             return redirect('bookings:request_detail', pk=request_pk)
     else:

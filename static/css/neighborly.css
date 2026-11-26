@@ -1513,6 +1513,52 @@ input::-ms-clear {
   color: #64748b;
   transition: all 0.2s ease;
 }
+
+/* --- In-App Notifications & Dropdown --- */
+.notification-dropdown .dropdown-menu {
+  animation: dropdownFadeIn 0.18s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.notification-list::-webkit-scrollbar,
+.chat-messages::-webkit-scrollbar {
+  width: 5px;
+}
+
+.notification-list::-webkit-scrollbar-thumb,
+.chat-messages::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+/* --- Chat Chips --- */
+.chat-chip {
+  background-color: #f8fafc;
+  border-color: #e2e8f0;
+  color: #475569;
+  transition: all 0.15s ease;
+  border-radius: 20px;
+}
+
+.chat-chip:hover {
+  background-color: #eef3ec;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* --- Visual Stepper on Request Detail --- */
+.booking-stepper .stepper-step {
+  transition: transform 0.2s ease;
+}
+
+.booking-stepper .stepper-step:hover {
+  transform: translateY(-2px);
+}
+
 .password-checklist li.met .check-icon {
   background: #10b981;
   color: #fff;

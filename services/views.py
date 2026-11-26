@@ -312,6 +312,30 @@ def update_request_status(request, request_id):
         if provider_response is not None:
             service_request.provider_response = provider_response.strip()
         service_request.save(update_fields=['status', 'provider_response', 'updated_at'])
+
+        # Notify customer of status change
+        try:
+            from core.models import send_notification, Notification
+            from django.urls import reverse
+            provider_name = request.user.profile.get_display_name() if hasattr(request.user, 'profile') else request.user.username
+            status_alerts = {
+                ServiceRequest.STATUS_ACCEPTED: ("Booking Confirmed! 🎉", f"Provider {provider_name} has accepted your booking for '{service_request.service.title}'."),
+                ServiceRequest.STATUS_INPROGRESS: ("Service In Progress 🛠️", f"Provider {provider_name} has started work on '{service_request.service.title}'."),
+                ServiceRequest.STATUS_COMPLETED: ("Service Completed! ⭐", f"Your service '{service_request.service.title}' is completed. Please write a review!"),
+                ServiceRequest.STATUS_REJECTED: ("Booking Declined", f"Provider was unable to accept request #{service_request.pk} for '{service_request.service.title}'."),
+            }
+            if new_status in status_alerts:
+                t_title, t_msg = status_alerts[new_status]
+                send_notification(
+                    user=service_request.customer,
+                    title=t_title,
+                    message=t_msg,
+                    target_url=reverse('bookings:request_detail', args=[service_request.pk]),
+                    notification_type=Notification.TYPE_BOOKING_STATUS
+                )
+        except Exception:
+            pass
+
         messages.success(request, f'Request status updated to {service_request.get_status_display()}.')
     else:
         messages.error(request, "Invalid status transition.")

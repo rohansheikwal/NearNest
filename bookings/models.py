@@ -77,3 +77,18 @@ class SavedService(models.Model):
 
     def __str__(self):
         return f"{self.customer.username} saved {self.service.title}"
+
+
+class BookingMessage(models.Model):
+    service_request = models.ForeignKey(ServiceRequest, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_booking_messages')
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Booking Message'
+        verbose_name_plural = 'Booking Messages'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Message by {self.sender.username} on Request #{self.service_request.pk}"

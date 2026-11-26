@@ -93,3 +93,65 @@ class ContactEmailFunctionalityTest(TestCase):
         response = self.client.post(reverse('core:contact'), payload, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Sorry, an error occurred while delivering your message.')
+
+
+class NotificationSystemTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from core.models import Notification, send_notification
+        self.user = User.objects.create_user(username='test_notif_user', password='Password123!')
+        self.user.profile.role = 'customer'
+        self.user.profile.save()
+
+    def test_send_notification_and_context_processor(self):
+        from core.models import send_notification, Notification
+        send_notification(
+            user=self.user,
+            title='Test Booking Confirmed',
+            message='Your booking has been accepted.',
+            target_url='/bookings/my-requests/',
+            notification_type=Notification.TYPE_BOOKING_STATUS
+        )
+        self.assertEqual(self.user.notifications.count(), 1)
+        self.assertEqual(self.user.notifications.filter(is_read=False).count(), 1)
+
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('core:home'))
+        self.assertEqual(response.context['unread_notifications_count'], 1)
+        self.assertEqual(len(response.context['recent_notifications']), 1)
+
+    def test_mark_notification_read(self):
+        from core.models import send_notification
+        notif = send_notification(
+            user=self.user,
+            title='New Alert',
+            message='Alert details',
+            target_url='/about/'
+        )
+        self.client.force_login(self.user)
+        res = self.client.get(reverse('core:mark_notification_read', args=[notif.pk]))
+        self.assertRedirects(res, '/about/')
+        notif.refresh_from_db()
+        self.assertTrue(notif.is_read)
+
+    def test_mark_all_notifications_read(self):
+        from core.models import send_notification
+        send_notification(user=self.user, title='Alert 1', message='msg 1')
+        send_notification(user=self.user, title='Alert 2', message='msg 2')
+        self.assertEqual(self.user.notifications.filter(is_read=False).count(), 2)
+
+        self.client.force_login(self.user)
+        res = self.client.get(reverse('core:mark_all_notifications_read'), follow=True)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(self.user.notifications.filter(is_read=False).count(), 0)
+
+    def test_notifications_api(self):
+        from core.models import send_notification
+        send_notification(user=self.user, title='API Alert', message='msg API')
+        self.client.force_login(self.user)
+        res = self.client.get(reverse('core:notifications_api'))
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data['unread_count'], 1)
+        self.assertEqual(len(data['notifications']), 1)
+        self.assertEqual(data['notifications'][0]['title'], 'API Alert')

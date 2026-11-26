@@ -1,13 +1,15 @@
 import json
 from datetime import date, datetime, timedelta
 from django.db import transaction
+from django.urls import reverse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from core.models import send_notification, Notification
 from services.models import Service, DAY_NAMES
-from .models import ServiceRequest, SavedService
+from .models import ServiceRequest, SavedService, BookingMessage
 from .forms import ServiceRequestForm
 
 
@@ -103,6 +105,19 @@ def request_service(request, service_pk):
                 service_request.service = service
                 service_request.status = ServiceRequest.STATUS_PENDING
                 service_request.save()
+
+                # Notify provider of new booking
+                try:
+                    send_notification(
+                        user=service.provider,
+                        title="New Booking Request! 🔔",
+                        message=f"{request.user.profile.get_display_name()} requested '{service.title}' for {service_request.requested_date.strftime('%d %b, %Y')}.",
+                        target_url=reverse('bookings:request_detail', args=[service_request.pk]),
+                        notification_type=Notification.TYPE_BOOKING_NEW
+                    )
+                except Exception:
+                    pass
+
                 messages.success(request, f'Your request for "{service.title}" has been sent! The provider will respond shortly.')
                 return redirect('bookings:request_detail', pk=service_request.pk)
     else:
@@ -192,7 +207,78 @@ def request_detail(request, pk):
         'service_request': service_request,
         'has_review': service_request.has_review,
         'is_provider_view': request.user == service_request.service.provider,
+        'booking_messages': service_request.messages.select_related('sender__profile').all(),
     })
+
+
+@login_required
+@require_POST
+def send_booking_message(request, pk):
+    service_request = get_object_or_404(
+        ServiceRequest.objects.select_related('customer__profile', 'service__provider__profile'),
+        pk=pk
+    )
+    if request.user != service_request.customer and request.user != service_request.service.provider:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+
+    text = request.POST.get('message', '').strip()
+    if not text:
+        return JsonResponse({'success': False, 'error': 'Message cannot be empty.'}, status=400)
+
+    msg = BookingMessage.objects.create(
+        service_request=service_request,
+        sender=request.user,
+        message=text
+    )
+
+    is_customer = (request.user == service_request.customer)
+    recipient = service_request.service.provider if is_customer else service_request.customer
+    sender_name = request.user.profile.get_display_name() if hasattr(request.user, 'profile') else request.user.username
+
+    try:
+        send_notification(
+            user=recipient,
+            title=f"New message from {sender_name}",
+            message=f"Request #{service_request.pk}: {text[:80]}",
+            target_url=reverse('bookings:request_detail', args=[service_request.pk]),
+            notification_type=Notification.TYPE_CHAT_MESSAGE
+        )
+    except Exception:
+        pass
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.headers.get('Accept') == 'application/json':
+        return JsonResponse({
+            'success': True,
+            'id': msg.id,
+            'sender_name': sender_name,
+            'is_me': True,
+            'message': msg.message,
+            'created_at': msg.created_at.strftime('%d %b, %I:%M %p')
+        })
+
+    messages.success(request, "Message sent.")
+    return redirect('bookings:request_detail', pk=pk)
+
+
+@login_required
+def get_booking_messages(request, pk):
+    service_request = get_object_or_404(ServiceRequest, pk=pk)
+    if request.user != service_request.customer and request.user != service_request.service.provider:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+
+    msgs = service_request.messages.select_related('sender__profile').all()
+    data = []
+    for m in msgs:
+        sender_name = m.sender.profile.get_display_name() if hasattr(m.sender, 'profile') else m.sender.username
+        data.append({
+            'id': m.id,
+            'sender_id': m.sender_id,
+            'sender_name': sender_name,
+            'is_me': (m.sender_id == request.user.id),
+            'message': m.message,
+            'created_at': m.created_at.strftime('%d %b, %I:%M %p')
+        })
+    return JsonResponse({'success': True, 'messages': data})
 
 
 @require_customer
@@ -202,6 +288,19 @@ def cancel_request(request, pk):
     if service_request.can_be_cancelled:
         service_request.status = ServiceRequest.STATUS_CANCELLED
         service_request.save(update_fields=['status', 'updated_at'])
+
+        # Notify provider
+        try:
+            send_notification(
+                user=service_request.service.provider,
+                title="Booking Cancelled ❌",
+                message=f"{request.user.profile.get_display_name()} cancelled booking request #{service_request.pk}.",
+                target_url=reverse('bookings:request_detail', args=[service_request.pk]),
+                notification_type=Notification.TYPE_BOOKING_STATUS
+            )
+        except Exception:
+            pass
+
         messages.success(request, "Your request has been cancelled.")
     else:
         messages.error(request, f"This request cannot be cancelled in its current status: {service_request.get_status_display()}.")

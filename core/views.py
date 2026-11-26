@@ -1,13 +1,16 @@
 from datetime import timedelta
 import logging
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.core.mail import EmailMessage
 from django.conf import settings
 from django.utils import timezone
 from django.db.models import Count, Q
 from services.models import Service, ServiceCategory
-from .models import ContactMessage
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from .models import ContactMessage, Notification, send_notification
 from .forms import ContactForm
 
 logger = logging.getLogger(__name__)
@@ -175,6 +178,62 @@ def privacy_policy(request):
 
 def terms_of_service(request):
     return render(request, 'core/terms_of_service.html')
+
+
+@login_required
+def notifications_list(request):
+    notifications = request.user.notifications.all()
+    paginator = Paginator(notifications, 15)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'core/notifications.html', {
+        'page_obj': page_obj,
+        'unread_count': request.user.notifications.filter(is_read=False).count(),
+    })
+
+
+@login_required
+def mark_notification_read(request, pk):
+    notification = get_object_or_404(Notification, pk=pk, user=request.user)
+    if not notification.is_read:
+        notification.is_read = True
+        notification.save(update_fields=['is_read'])
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.headers.get('Accept') == 'application/json':
+        return JsonResponse({'success': True, 'unread_count': request.user.notifications.filter(is_read=False).count()})
+
+    if notification.target_url:
+        return redirect(notification.target_url)
+    return redirect('core:notifications_list')
+
+
+@login_required
+def mark_all_notifications_read(request):
+    request.user.notifications.filter(is_read=False).update(is_read=True)
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.headers.get('Accept') == 'application/json':
+        return JsonResponse({'success': True, 'unread_count': 0})
+    messages.success(request, "All notifications marked as read.")
+    return redirect('core:notifications_list')
+
+
+@login_required
+def notifications_api(request):
+    notifications = request.user.notifications.all()[:8]
+    data = []
+    for n in notifications:
+        data.append({
+            'id': n.id,
+            'title': n.title,
+            'message': n.message,
+            'type': n.notification_type,
+            'target_url': n.target_url,
+            'is_read': n.is_read,
+            'created_at': n.created_at.strftime('%d %b, %I:%M %p'),
+        })
+    return JsonResponse({
+        'unread_count': request.user.notifications.filter(is_read=False).count(),
+        'notifications': data,
+    })
 
 
 def error_403(request, exception=None):

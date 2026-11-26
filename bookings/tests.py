@@ -475,4 +475,118 @@ class ProviderWiseAvailabilityValidationScenariosTests(TestCase):
         valid_time, _ = new_svc.is_time_available(saturday, datetime.time(8, 0))
         self.assertTrue(valid_time)
 
-# Create your tests here.
+
+class BookingChatAndNotificationIntegrationTests(TestCase):
+    def setUp(self):
+        from accounts.models import Profile
+        self.category = ServiceCategory.objects.create(name='Cleaning', slug='cleaning')
+
+        self.customer = User.objects.create_user(username='chat_cust', password='Password123!')
+        self.customer.profile.role = Profile.ROLE_CUSTOMER
+        self.customer.profile.save()
+
+        self.provider = User.objects.create_user(username='chat_prov', password='Password123!')
+        self.provider.profile.role = Profile.ROLE_PROVIDER
+        self.provider.profile.save()
+
+        self.other_user = User.objects.create_user(username='chat_other', password='Password123!')
+        self.other_user.profile.role = Profile.ROLE_CUSTOMER
+        self.other_user.profile.save()
+
+        self.service = Service.objects.create(
+            provider=self.provider,
+            category=self.category,
+            title='Deep Cleaning',
+            description='Cleaning service',
+            price=Decimal('1000.00'),
+            available_days='0,1,2,3,4,5,6',
+            start_time=datetime.time(8, 0),
+            end_time=datetime.time(20, 0),
+            duration_hours=2,
+            city='Noida',
+        )
+
+        self.service_request = ServiceRequest.objects.create(
+            customer=self.customer,
+            service=self.service,
+            requested_date=datetime.date.today() + datetime.timedelta(days=2),
+            requested_time=datetime.time(10, 0),
+            service_location='A-42 Sector 62',
+            work_description='Full house cleaning',
+            status=ServiceRequest.STATUS_ACCEPTED,
+        )
+
+    def test_customer_sends_chat_message_notifies_provider(self):
+        self.client.force_login(self.customer)
+        url = reverse('bookings:send_booking_message', args=[self.service_request.pk])
+        res = self.client.post(url, {'message': 'Please bring cleaning supplies.'}, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['message'], 'Please bring cleaning supplies.')
+
+        # Verify message in database
+        self.assertEqual(self.service_request.messages.count(), 1)
+        # Verify provider received a notification
+        prov_notif = self.provider.notifications.first()
+        self.assertIsNotNone(prov_notif)
+        self.assertIn('New message', prov_notif.title)
+        self.assertIn('cleaning supplies', prov_notif.message)
+
+    def test_provider_sends_chat_message_notifies_customer(self):
+        self.client.force_login(self.provider)
+        url = reverse('bookings:send_booking_message', args=[self.service_request.pk])
+        res = self.client.post(url, {'message': 'Yes, everything is packed and ready.'})
+        self.assertRedirects(res, reverse('bookings:request_detail', args=[self.service_request.pk]))
+
+        # Verify message in database
+        self.assertEqual(self.service_request.messages.count(), 1)
+        # Verify customer received a notification
+        cust_notif = self.customer.notifications.first()
+        self.assertIsNotNone(cust_notif)
+        self.assertIn('New message', cust_notif.title)
+
+    def test_unauthorized_user_cannot_send_chat_message(self):
+        self.client.force_login(self.other_user)
+        url = reverse('bookings:send_booking_message', args=[self.service_request.pk])
+        res = self.client.post(url, {'message': 'I should not be able to talk here.'})
+        self.assertEqual(res.status_code, 403)
+        self.assertEqual(self.service_request.messages.count(), 0)
+
+    def test_empty_chat_message_rejected(self):
+        self.client.force_login(self.customer)
+        url = reverse('bookings:send_booking_message', args=[self.service_request.pk])
+        res = self.client.post(url, {'message': '   '})
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(self.service_request.messages.count(), 0)
+
+    def test_get_booking_messages_api(self):
+        from bookings.models import BookingMessage
+        BookingMessage.objects.create(
+            service_request=self.service_request,
+            sender=self.customer,
+            message='First hello'
+        )
+        self.client.force_login(self.customer)
+        url = reverse('bookings:get_booking_messages', args=[self.service_request.pk])
+        res = self.client.get(url, HTTP_ACCEPT='application/json')
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(len(data['messages']), 1)
+        self.assertEqual(data['messages'][0]['message'], 'First hello')
+        self.assertTrue(data['messages'][0]['is_me'])
+
+    def test_provider_accepting_booking_notifies_customer(self):
+        self.service_request.status = ServiceRequest.STATUS_PENDING
+        self.service_request.save()
+
+        self.client.force_login(self.provider)
+        url = reverse('services:update_request_status', args=[self.service_request.pk])
+        res = self.client.post(url, {'status': ServiceRequest.STATUS_ACCEPTED})
+        self.assertEqual(res.status_code, 302)
+
+        # Customer must have received status notification
+        notif = self.customer.notifications.first()
+        self.assertIsNotNone(notif)
+        self.assertIn('Confirmed', notif.title)
